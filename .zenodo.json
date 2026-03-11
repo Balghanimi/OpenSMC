@@ -1,0 +1,28 @@
+{
+    "title": "OpenSMC: A Modular, Composable MATLAB Toolbox for Sliding Mode Control",
+    "description": "OpenSMC is an open-source MATLAB toolbox for Sliding Mode Control research and benchmarking. It provides 9 surfaces, 5 reaching laws, 6 plants, 8 controllers, 6 estimators, and 132 tests.",
+    "upload_type": "software",
+    "license": "MIT",
+    "creators": [
+          {
+                  "name": "Balghanimi, Rusul",
+                  "affiliation": ""
+          }
+    ],
+    "keywords": [
+          "sliding-mode-control",
+          "control-systems",
+          "MATLAB",
+          "robust-control",
+          "nonlinear-control",
+          "benchmarking"
+    ],
+    "related_identifiers": [
+          {
+                  "scheme": "url",
+                  "identifier": "https://github.com/Balghanimi/OpenSMC",
+                  "relation": "isSupplementTo"
+          }
+    ],
+    "access_right": "open"
+}
