@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenSMC — Project Mind Map</title>
+<style>
+  :root {
+    --done: #27ae60;
+    --partial: #f39c12;
+    --todo: #e74c3c;
+    --info: #3498db;
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #1a1e2e 0%, #0d1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top:0; z-index:100;
+  }
+  header h1 { font-size: 1.6rem; font-weight: 700; }
+  header h1 span { color: var(--accent); }
+  .header-stats {
+    display: flex; gap: 24px;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat-val {
+    font-size: 1.5rem; font-weight: 700;
+  }
+  .stat-label {
+    font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px;
+  }
+
+  /* ── Progress bar ── */
+  .progress-bar-wrap {
+    margin: 16px 32px 0;
+    background: var(--border);
+    border-radius: 8px;
+    height: 10px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--done), #2ecc71);
+    transition: width 0.8s ease;
+  }
+  .progress-label {
+    margin: 4px 32px 20px;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  /* ── Controls ── */
+  .controls {
+    padding: 0 32px 16px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .controls button {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+  }
+  .controls button:hover { background: var(--border); }
+  .controls button.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+  /* ── Mind Map Container ── */
+  .map {
+    padding: 0 32px 48px;
+  }
+
+  /* ── Branch ── */
+  .branch {
+    margin-bottom: 12px;
+  }
+  .branch-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s;
+  }
+  .branch-header:hover {
+    border-color: var(--accent);
+    background: #1c2333;
+  }
+  .branch-header.expanded {
+    border-radius: 10px 10px 0 0;
+    border-bottom-color: transparent;
+  }
+  .branch-toggle {
+    font-size: 0.9rem;
+    width: 20px;
+    text-align: center;
+    transition: transform 0.3s;
+    color: var(--muted);
+  }
+  .branch-header.expanded .branch-toggle {
+    transform: rotate(90deg);
+  }
+  .branch-icon {
+    font-size: 1.2rem;
+    width: 28px;
+    text-align: center;
+  }
+  .branch-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    flex: 1;
+  }
+  .branch-badge {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge-done { background: rgba(39,174,96,0.2); color: var(--done); }
+  .badge-partial { background: rgba(243,156,18,0.2); color: var(--partial); }
+  .badge-todo { background: rgba(231,76,60,0.2); color: var(--todo); }
+  .badge-info { background: rgba(52,152,219,0.2); color: var(--info); }
+
+  .branch-count {
+    font-size: 0.75rem;
+    color: var(--muted);
+    background: rgba(255,255,255,0.06);
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+
+  .branch-body {
+    display: none;
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    background: var(--card);
+    padding: 12px 16px;
+  }
+  .branch-body.open { display: block; }
+
+  /* ── Leaf items ── */
+  .leaf {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(48,54,61,0.5);
+    font-size: 0.85rem;
+  }
+  .leaf:last-child { border-bottom: none; }
+  .leaf-check {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+  }
+  .check-done { background: var(--done); color: #fff; }
+  .check-todo { background: transparent; border: 2px solid var(--border); }
+  .check-partial { background: var(--partial); color: #fff; }
+  .leaf-name { font-weight: 600; color: var(--text); }
+  .leaf-desc { color: var(--muted); }
+  .leaf-tag {
+    font-size: 0.65rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(88,166,255,0.12);
+    color: var(--accent);
+    margin-left: 4px;
+    white-space: nowrap;
+  }
+
+  /* ── Sub-branch (nested) ── */
+  .sub-branch {
+    margin: 8px 0 8px 20px;
+    border-left: 2px solid var(--border);
+    padding-left: 16px;
+  }
+  .sub-title {
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--accent);
+    margin-bottom: 4px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .sub-title:hover { text-decoration: underline; }
+
+  /* ── Connection lines ── */
+  .connections-section {
+    padding: 24px 32px;
+  }
+  .conn-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .conn-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    transition: border-color 0.2s;
+  }
+  .conn-card:hover { border-color: var(--accent); }
+  .conn-card h4 { font-size: 0.9rem; margin-bottom: 6px; }
+  .conn-card p { font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
+  .conn-arrow { color: var(--accent); font-weight: 700; }
+
+  /* ── Phase Timeline ── */
+  .timeline {
+    display: flex;
+    gap: 0;
+    margin: 16px 0;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .tl-item {
+    flex: 1;
+    min-width: 100px;
+    text-align: center;
+    position: relative;
+  }
+  .tl-dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin: 0 auto 6px;
+    position: relative;
+    z-index: 2;
+  }
+  .tl-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background: var(--border);
+    z-index: 1;
+  }
+  .tl-item.done:not(:last-child)::after { background: var(--done); }
+  .tl-label { font-size: 0.7rem; color: var(--muted); }
+  .tl-phase { font-size: 0.75rem; font-weight: 600; margin-top: 2px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    header { flex-direction: column; gap: 12px; }
+    .header-stats { gap: 16px; }
+    .map, .controls, .connections-section { padding-left: 16px; padding-right: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>OpenSMC</span> &mdash; Project Mind Map</h1>
+  <div class="header-stats">
+    <div class="stat">
+      <div class="stat-val" style="color:var(--accent)">62</div>
+      <div class="stat-label">MATLAB Files</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" style="color:var(--accent)">~5,800</div>
+      <div class="stat-label">Lines of Code</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" style="color:var(--done)">132</div>
+      <div class="stat-label">Tests</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" style="color:var(--partial)">60%</div>
+      <div class="stat-label">Overall</div>
+    </div>
+  </div>
+</header>
+
+<div class="progress-bar-wrap">
+  <div class="progress-bar-fill" style="width:60%"></div>
+</div>
+<div class="progress-label">Overall Project Progress &mdash; Phase 0 &#10003; | Phase 1 (75%) | Phase 2 &#10003; | SoftwareX Draft &#10003; | Next: GitHub Push + Zenodo DOI + RL Integration</div>
+
+<!-- Phase Timeline -->
+<div style="padding:12px 32px 0;">
+  <div class="timeline">
+    <div class="tl-item done">
+      <div class="tl-dot" style="background:var(--done)"></div>
+      <div class="tl-label">Phase 0</div>
+      <div class="tl-phase">Architecture</div>
+    </div>
+    <div class="tl-item done">
+      <div class="tl-dot" style="background:var(--partial)"></div>
+      <div class="tl-label">Phase 1</div>
+      <div class="tl-phase">Book Extraction</div>
+    </div>
+    <div class="tl-item done">
+      <div class="tl-dot" style="background:var(--done)"></div>
+      <div class="tl-label">Phase 2</div>
+      <div class="tl-phase">Port Code</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot" style="background:var(--todo)"></div>
+      <div class="tl-label">Phase 3</div>
+      <div class="tl-phase">More Surfaces</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot" style="background:var(--todo)"></div>
+      <div class="tl-label">Phase 4</div>
+      <div class="tl-phase">More Plants</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot" style="background:var(--todo)"></div>
+      <div class="tl-label">Phase 5</div>
+      <div class="tl-phase">RL Integration</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot" style="background:var(--partial)"></div>
+      <div class="tl-label">Phase 6</div>
+      <div class="tl-phase">Publication</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot" style="background:var(--todo)"></div>
+      <div class="tl-label">Phase 7</div>
+      <div class="tl-phase">Community</div>
+    </div>
+  </div>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+  <button onclick="toggleAll(true)">Expand All</button>
+  <button onclick="toggleAll(false)">Collapse All</button>
+  <button onclick="filterStatus('all')" class="active" id="btn-all">All</button>
+  <button onclick="filterStatus('done')" id="btn-done" style="border-color:var(--done)">Done</button>
+  <button onclick="filterStatus('todo')" id="btn-todo" style="border-color:var(--todo)">To Do</button>
+</div>
+
+<div class="map" id="map">
+
+  <!-- ═══════════ CORE INTERFACES ═══════════ -->
+  <div class="branch" data-status="done">
+    <div class="branch-header" onclick="toggle(this)">
+      <span class="branch-toggle">&#9654;</span>
+      <span class="branch-icon">&#9881;</span>
+      <span class="branch-title">Core Interfaces</span>
+      <span class="branch-count">6 abstract classes</span>
+      <span class="branch-badge badge-done">100%</span>
+    </div>
+    <div class="branch-body">
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">SlidingSurface</span> <span class="leaf-desc">&mdash; s = f(e, edot, eint, t)</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">ReachingLaw</span> <span class="leaf-desc">&mdash; u_r = g(s, t)</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">Plant</span> <span class="leaf-desc">&mdash; xdot = dynamics(t, x, u, d)</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">Controller</span> <span class="leaf-desc">&mdash; u = ueq + ur - dhat</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">Estimator</span> <span class="leaf-desc">&mdash; dhat = estimate(t, x, u, y)</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">Architecture</span> <span class="leaf-desc">&mdash; Direct / Cascaded / Hierarchical composition</span></div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ SLIDING SURFACES ═══════════ -->
+  <div class="branch" data-status="done">
+    <div class="branch-header" onclick="toggle(this)">
+      <span class="branch-toggle">&#9654;</span>
+      <span class="branch-icon">&#12336;</span>
+      <span class="branch-title">Sliding Surfaces</span>
+      <span class="branch-count">9 implemented + 5 planned</span>
+      <span class="branch-badge badge-done">9/9</span>
+    </div>
+    <div class="branch-body">
+      <div class="sub-branch">
+        <div class="sub-title">Implemented (9)</div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">LinearSurface</span> <span class="leaf-desc">&mdash; s = edot + c*e</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">TerminalSurface</span> <span class="leaf-desc">&mdash; s = edot + &beta;|e|^(p/q)sign(e)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">NonsingularTerminalSurface</span> <span class="leaf-desc">&mdash; s = e + (1/&beta;)|edot|^(q/p)sign(edot)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">FastTerminalSurface</span> <span class="leaf-desc">&mdash; s = edot + &alpha;e + &beta;|e|^(q/p)sign(e)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">IntegralTerminalSurface</span> <span class="leaf-desc">&mdash; s = edot + c1*e + c2*&int;|e|^(p/q)sign(e)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">HierarchicalSurface</span> <span class="leaf-desc">&mdash; S = s_act + &lambda;*s_unact</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">IntegralSlidingSurface</span> <span class="leaf-desc">&mdash; eliminates reaching phase (Qian App C)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">PIDSurface</span> <span class="leaf-desc">&mdash; &alpha;edot + &beta;e + &gamma;eint (Qian App E)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">NonlinearDampingSurface</span> <span class="leaf-desc">&mdash; edot + (c+&Psi;(y))*e (Bandyopadhyay)</span></div></div>
+      </div>
+      <div class="sub-branch">
+        <div class="sub-title">Planned (Phase 3)</div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">FractionalOrderSurface</span> <span class="leaf-desc">&mdash; D^&alpha;(e) + c*e</span></div></div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">GlobalSurface</span> <span class="leaf-desc">&mdash; no reaching phase</span></div></div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">PrescribedPerformanceSurface</span> <span class="leaf-desc">&mdash; error within funnel</span></div></div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">AdaptiveSurface</span> <span class="leaf-desc">&mdash; online gain adaptation</span></div></div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">RLDiscoveredSurface</span> <span class="leaf-desc">&mdash; RL agent output (Phase 5)</span> <span class="leaf-tag">HIGH PRIORITY</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ REACHING LAWS ═══════════ -->
+  <div class="branch" data-status="done">
+    <div class="branch-header" onclick="toggle(this)">
+      <span class="branch-toggle">&#9654;</span>
+      <span class="branch-icon">&#8618;</span>
+      <span class="branch-title">Reaching Laws</span>
+      <span class="branch-count">5 implemented + 4 planned</span>
+      <span class="branch-badge badge-done">5/5</span>
+    </div>
+    <div class="branch-body">
+      <div class="sub-branch">
+        <div class="sub-title">Implemented (5)</div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">ConstantRate</span> <span class="leaf-desc">&mdash; -k*sign(s)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">ExponentialRate</span> <span class="leaf-desc">&mdash; -k*sign(s) - q*s</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">PowerRate</span> <span class="leaf-desc">&mdash; -k*|s|^&alpha;*sign(s)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">SuperTwisting</span> <span class="leaf-desc">&mdash; 2nd-order, chattering-free (Levant 1993)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">Saturation</span> <span class="leaf-desc">&mdash; -k*sat(s/&phi;)</span></div></div>
+      </div>
+      <div class="sub-branch">
+        <div class="sub-title">Planned (Phase 3)</div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">HyperbolicTangent</span> <span class="leaf-desc">&mdash; -k*tanh(s/&phi;)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">SigmoidRate</span> <span class="leaf-desc">&mdash; -k*s/(|s|+&epsilon;)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">AdaptiveGain</span> <span class="leaf-desc">&mdash; adapts to disturbance bound</span></div></div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">DiscreteTimeSMC</span> <span class="leaf-desc">&mdash; discrete reaching law</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ PLANTS ═══════════ -->
+  <div class="branch" data-status="done">
+    <div class="branch-header" onclick="toggle(this)">
+      <span class="branch-toggle">&#9654;</span>
+      <span class="branch-icon">&#9881;</span>
+      <span class="branch-title">Plants (Dynamical Systems)</span>
+      <span class="branch-count">6 implemented + 4 planned</span>
+      <span class="branch-badge badge-done">6/6</span>
+    </div>
+    <div class="branch-body">
+      <div class="sub-branch">
+        <div class="sub-title">Implemented (6)</div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">DoubleIntegrator</span> <span class="leaf-desc">&mdash; 2-state, 1-input (canonical)</span> <span class="leaf-tag">BENCHMARK</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">InvertedPendulum</span> <span class="leaf-desc">&mdash; 4-state, 1-input (underactuated)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">SinglePendulumCrane</span> <span class="leaf-desc">&mdash; 4-state, 1-input (Qian Ch 2-3)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">DoublePendulumCrane</span> <span class="leaf-desc">&mdash; 6-state, 1-input (Qian Ch 2-3)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">Quadrotor6DOF</span> <span class="leaf-desc">&mdash; 12-state, 4-input (Newton-Euler)</span> <span class="leaf-tag">ITSMC-ELM</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">DualStageNanopositioner</span> <span class="leaf-desc">&mdash; 4-state, 1-input (2-mode piezo, 780+2340 Hz)</span> <span class="leaf-tag">NFTSMC</span> <span class="leaf-tag" style="background:rgba(39,174,96,0.15);color:var(--done)">NEW</span></div></div>
+      </div>
+      <div class="sub-branch">
+        <div class="sub-title">Planned (Phase 4)</div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">RobotArm2DOF</span> <span class="leaf-desc">&mdash; 4-state, 2-input (fully actuated)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">DCMotor</span> <span class="leaf-desc">&mdash; 2-state, 1-input (teaching)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">MassSpringDamper</span> <span class="leaf-desc">&mdash; 2-state, 1-input</span></div></div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">PMSM</span> <span class="leaf-desc">&mdash; permanent magnet synchronous motor</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ CONTROLLERS ═══════════ -->
+  <div class="branch" data-status="done">
+    <div class="branch-header" onclick="toggle(this)">
+      <span class="branch-toggle">&#9654;</span>
+      <span class="branch-icon">&#127918;</span>
+      <span class="branch-title">Controllers</span>
+      <span class="branch-count">8 implemented</span>
+      <span class="branch-badge badge-done">8/8</span>
+    </div>
+    <div class="branch-body">
+      <div class="sub-branch">
+        <div class="sub-title">General Purpose</div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">ClassicalSMC</span> <span class="leaf-desc">&mdash; any surface + any reaching (workhorse)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">AdaptiveSMC</span> <span class="leaf-desc">&mdash; adaptive gain with projection (Liu Ch 6)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">DynamicSMC</span> <span class="leaf-desc">&mdash; dynamic sliding variable &sigma; = s&#775; + &lambda;s (Liu Ch 7)</span></div></div>
+      </div>
+      <div class="sub-branch">
+        <div class="sub-title">Hierarchical (Crane-Specific)</div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">AggregatedHSMC</span> <span class="leaf-desc">&mdash; two-layer (Qian Sec 4.2)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">IncrementalHSMC</span> <span class="leaf-desc">&mdash; three-layer + sign-switching (Qian Sec 4.3)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">CombiningHSMC</span> <span class="leaf-desc">&mdash; intermediate variable (Qian Sec 4.4)</span></div></div>
+      </div>
+      <div class="sub-branch">
+        <div class="sub-title">Research Manuscripts</div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">ITSMC</span> <span class="leaf-desc">&mdash; integral terminal + RBF-ELM estimation</span> <span class="leaf-tag">QUADROTOR</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">NFTSMC</span> <span class="leaf-desc">&mdash; nonsingular fast terminal + feedforward + integral</span> <span class="leaf-tag">NANOPOSITIONER</span> <span class="leaf-tag" style="background:rgba(39,174,96,0.15);color:var(--done)">NEW</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ ESTIMATORS ═══════════ -->
+  <div class="branch" data-status="done">
+    <div class="branch-header" onclick="toggle(this)">
+      <span class="branch-toggle">&#9654;</span>
+      <span class="branch-icon">&#128065;</span>
+      <span class="branch-title">Estimators</span>
+      <span class="branch-count">6 implemented + 1 planned</span>
+      <span class="branch-badge badge-done">6/6</span>
+    </div>
+    <div class="branch-body">
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">NoEstimator</span> <span class="leaf-desc">&mdash; zero (pure SMC switching)</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">DisturbanceObserver</span> <span class="leaf-desc">&mdash; slow time-varying DOB (Liu Ch 8)</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">ExtendedStateObserver</span> <span class="leaf-desc">&mdash; ADRC-style ESO (Liu Ch 8)</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">HighGainObserver</span> <span class="leaf-desc">&mdash; high-gain observer</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">IntegralChainDifferentiator</span> <span class="leaf-desc">&mdash; exact differentiator</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">RBF_ELM</span> <span class="leaf-desc">&mdash; neural network (OS-ELM online update)</span> <span class="leaf-tag">ITSMC-ELM</span></div></div>
+      <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">SlidingModeObserver</span> <span class="leaf-desc">&mdash; SMO (Ben 2013, Phase 1.4)</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ ARCHITECTURES ═══════════ -->
+  <div class="branch" data-status="done">
+    <div class="branch-header" onclick="toggle(this)">
+      <span class="branch-toggle">&#9654;</span>
+      <span class="branch-icon">&#127959;</span>
+      <span class="branch-title">Architectures</span>
+      <span class="branch-count">2 implemented + 1 planned</span>
+      <span class="branch-badge badge-done">2/2</span>
+    </div>
+    <div class="branch-body">
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">DirectSMC</span> <span class="leaf-desc">&mdash; single controller, fully actuated systems</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">CascadedSMC</span> <span class="leaf-desc">&mdash; outer ITSMC + control alloc + inner PD (quadrotor)</span></div></div>
+      <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">ObserverBasedSMC</span> <span class="leaf-desc">&mdash; SMO + controller (Ben 2013, Phase 1.4)</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ BENCHMARK FRAMEWORK ═══════════ -->
+  <div class="branch" data-status="done">
+    <div class="branch-header" onclick="toggle(this)">
+      <span class="branch-toggle">&#9654;</span>
+      <span class="branch-icon">&#128202;</span>
+      <span class="branch-title">Benchmark Framework</span>
+      <span class="branch-count">3 core + 2 utils</span>
+      <span class="branch-badge badge-done">100%</span>
+    </div>
+    <div class="branch-body">
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">Simulator</span> <span class="leaf-desc">&mdash; fixed-step RK4/Euler closed-loop engine</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">Metrics</span> <span class="leaf-desc">&mdash; 12 standardized (RMSE, MAE, ISE, IAE, settling, overshoot, effort, chattering, reaching, SS error, max_swing, residual_swing)</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">BenchmarkRunner</span> <span class="leaf-desc">&mdash; run all arch &times; plant combos, table + plot</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">utils.references</span> <span class="leaf-desc">&mdash; step, ramp, sinusoidal, multi-step, transport, circular_3d</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">utils.disturbances</span> <span class="leaf-desc">&mdash; none, step, sinusoidal, random_band, composite</span></div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ EXAMPLES ═══════════ -->
+  <div class="branch" data-status="done">
+    <div class="branch-header" onclick="toggle(this)">
+      <span class="branch-toggle">&#9654;</span>
+      <span class="branch-icon">&#128214;</span>
+      <span class="branch-title">Examples</span>
+      <span class="branch-count">7 worked examples</span>
+      <span class="branch-badge badge-done">7/7</span>
+    </div>
+    <div class="branch-body">
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">example_quick_start.m</span> <span class="leaf-desc">&mdash; 4 SMC variants on double integrator</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">example_surface_swap.m</span> <span class="leaf-desc">&mdash; 5 surfaces, same reaching law</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">example_crane_hsmc.m</span> <span class="leaf-desc">&mdash; 3 HSMC methods on crane (manual loop)</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">example_itsmc_quadrotor.m</span> <span class="leaf-desc">&mdash; ITSMC-ELM on 6-DOF quadrotor</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">example_benchmark_crane.m</span> <span class="leaf-desc">&mdash; BenchmarkRunner: 3 HSMC &times; 2 scenarios</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">example_benchmark_quadrotor.m</span> <span class="leaf-desc">&mdash; BenchmarkRunner: ITSMC &times; 2 scenarios</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">example_nftsmc_nanopositioner.m</span> <span class="leaf-desc">&mdash; NFTSMC: step, vibration, tracking (3 scenarios)</span> <span class="leaf-tag" style="background:rgba(39,174,96,0.15);color:var(--done)">NEW</span></div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ TESTS ═══════════ -->
+  <div class="branch" data-status="done">
+    <div class="branch-header" onclick="toggle(this)">
+      <span class="branch-toggle">&#9654;</span>
+      <span class="branch-icon">&#9989;</span>
+      <span class="branch-title">Test Suite</span>
+      <span class="branch-count">132 tests, 8 files</span>
+      <span class="branch-badge badge-done">ALL PASS</span>
+    </div>
+    <div class="branch-body">
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">test_surfaces.m</span> <span class="leaf-desc">&mdash; 20 tests (all 9 surfaces)</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">test_reaching.m</span> <span class="leaf-desc">&mdash; 19 tests (all 5 reaching laws)</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">test_plants.m</span> <span class="leaf-desc">&mdash; 33 tests (all 6 plants incl. nanopositioner)</span> <span class="leaf-tag" style="background:rgba(39,174,96,0.15);color:var(--done)">+8 NEW</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">test_controllers.m</span> <span class="leaf-desc">&mdash; 15 tests (all 8 controllers incl. NFTSMC)</span> <span class="leaf-tag" style="background:rgba(39,174,96,0.15);color:var(--done)">+4 NEW</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">test_estimators.m</span> <span class="leaf-desc">&mdash; 15 tests (all 6 estimators)</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">test_benchmark.m</span> <span class="leaf-desc">&mdash; 17 tests (simulator, metrics, runner)</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">test_integration.m</span> <span class="leaf-desc">&mdash; 13 full pipeline tests</span> <span class="leaf-tag" style="background:rgba(39,174,96,0.15);color:var(--done)">+2 NEW</span></div></div>
+      <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">run_all_tests.m</span> <span class="leaf-desc">&mdash; test runner script</span></div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ SOURCE MATERIAL ═══════════ -->
+  <div class="branch" data-status="partial">
+    <div class="branch-header" onclick="toggle(this)">
+      <span class="branch-toggle">&#9654;</span>
+      <span class="branch-icon">&#128218;</span>
+      <span class="branch-title">Source Material</span>
+      <span class="branch-count">4 books + 2 manuscripts</span>
+      <span class="branch-badge badge-partial">5/6</span>
+    </div>
+    <div class="branch-body">
+      <div class="sub-branch">
+        <div class="sub-title">Books</div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">Liu &amp; Wang (2013)</span> <span class="leaf-desc">&mdash; Advanced SMC: MATLAB Simulation (366 pp)</span> <span class="leaf-tag">1 surf, 2 ctrl, 4 est</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">Qian &amp; Yi (2015)</span> <span class="leaf-desc">&mdash; Hierarchical SMC for Cranes (210 pp)</span> <span class="leaf-tag">2 plants, 3 ctrl, 2 surf</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">Bandyopadhyay (2009)</span> <span class="leaf-desc">&mdash; SMC Using Novel Sliding Surfaces (190 pp)</span> <span class="leaf-tag">1 surface</span></div></div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Ben (2013)</span> <span class="leaf-desc">&mdash; SMC and Observation (369 pp) &mdash; SMO + ObserverBasedSMC</span></div></div>
+      </div>
+      <div class="sub-branch">
+        <div class="sub-title">Own Manuscripts</div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">ITSMC-ELM Quadrotor</span> <span class="leaf-desc">&mdash; RBF_ELM, ITSMC, Quadrotor6DOF, CascadedSMC</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">NFTSMC Nanopositioner</span> <span class="leaf-desc">&mdash; DualStageNanopositioner, NFTSMC controller</span> <span class="leaf-tag" style="background:rgba(39,174,96,0.15);color:var(--done)">NEW</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ PUBLICATION PIPELINE ═══════════ -->
+  <div class="branch" data-status="partial">
+    <div class="branch-header" onclick="toggle(this)">
+      <span class="branch-toggle">&#9654;</span>
+      <span class="branch-icon">&#128240;</span>
+      <span class="branch-title">Publication Pipeline (Phase 6)</span>
+      <span class="branch-count">3 papers planned</span>
+      <span class="branch-badge badge-partial">DRAFT</span>
+    </div>
+    <div class="branch-body">
+      <div class="sub-branch">
+        <div class="sub-title">Paper 1: SoftwareX Toolbox Paper</div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">Write paper draft</span> <span class="leaf-desc">&mdash; softwarex_paper.tex (614 lines) + compiled PDF</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">Architecture diagram</span> <span class="leaf-desc">&mdash; generate_fig_architecture.pdf</span></div></div>
+        <div class="leaf"><div class="leaf-check check-done">&#10003;</div><div><span class="leaf-name">Results figures</span> <span class="leaf-desc">&mdash; fig_results.pdf (quadrotor trajectory)</span></div></div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Push to GitHub</span> <span class="leaf-desc">&mdash; Balghanimi/OpenSMC</span> <span class="leaf-tag">HIGH PRIORITY</span></div></div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Create Zenodo DOI</span> <span class="leaf-desc">&mdash; required for SoftwareX submission</span> <span class="leaf-tag">HIGH PRIORITY</span></div></div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Submit to SoftwareX</span> <span class="leaf-desc">&mdash; 4-8 week review cycle</span></div></div>
+      </div>
+      <div class="sub-branch">
+        <div class="sub-title">Paper 2: Benchmark Study (Control Eng Practice / ISA Trans)</div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Run full benchmark</span> <span class="leaf-desc">&mdash; 8+ variants &times; 5+ plants</span></div></div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Generate comparison tables</span></div></div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Write paper</span> <span class="leaf-desc">&mdash; "first standardized benchmark for SMC"</span></div></div>
+      </div>
+      <div class="sub-branch">
+        <div class="sub-title">Paper 3: RL-Discovered Sliding Surfaces (Automatica / IEEE TAC)</div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">RL integration</span> <span class="leaf-desc">&mdash; Phase 5</span></div></div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Demonstrate RL &gt; ALL classical surfaces</span></div></div>
+        <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Write paper</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ RL INTEGRATION (Phase 5) ═══════════ -->
+  <div class="branch" data-status="todo">
+    <div class="branch-header" onclick="toggle(this)">
+      <span class="branch-toggle">&#9654;</span>
+      <span class="branch-icon">&#129302;</span>
+      <span class="branch-title">RL Integration (Phase 5)</span>
+      <span class="branch-count">0/7 steps</span>
+      <span class="branch-badge badge-todo">NOT STARTED</span>
+    </div>
+    <div class="branch-body">
+      <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Define RLDiscoveredSurface class</span> <span class="leaf-desc">&mdash; s = NN(e, edot, t)</span></div></div>
+      <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Create Gymnasium wrapper</span> <span class="leaf-desc">&mdash; Python bridge or pure Python port</span></div></div>
+      <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Implement PPO/SAC training loop</span></div></div>
+      <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Train on DoubleIntegrator</span></div></div>
+      <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Compare RL vs ALL classical surfaces</span></div></div>
+      <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Extend to Quadrotor &amp; Crane</span></div></div>
+      <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Write paper</span></div></div>
+      <div style="margin-top:10px; font-size:0.78rem; color:var(--muted); padding: 8px; background: rgba(88,166,255,0.08); border-radius:6px;">
+        <strong style="color:var(--accent)">Links to:</strong> RL-Discovered Sliding Surfaces project at <code>D:/Ali_Kufa_University/Journals Paper/RL-Discovered-Sliding-Surfaces/</code> — PPO found c*~1.1 (time-varying), 6x better ISE than textbook. Phase 1 done, Phase 2 Step 4 done (4/10).
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ COMMUNITY (Phase 7) ═══════════ -->
+  <div class="branch" data-status="todo">
+    <div class="branch-header" onclick="toggle(this)">
+      <span class="branch-toggle">&#9654;</span>
+      <span class="branch-icon">&#127760;</span>
+      <span class="branch-title">Community &amp; Maintenance (Phase 7)</span>
+      <span class="branch-count">0/6 steps</span>
+      <span class="branch-badge badge-todo">NOT STARTED</span>
+    </div>
+    <div class="branch-body">
+      <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Push to GitHub</span> <span class="leaf-desc">&mdash; Balghanimi/OpenSMC</span></div></div>
+      <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">README + LICENSE</span> <span class="leaf-desc">&mdash; MIT or BSD-3, quick start, citation</span></div></div>
+      <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">MATLAB File Exchange</span></div></div>
+      <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Python port</span> <span class="leaf-desc">&mdash; opensmc pip package</span></div></div>
+      <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">CI/CD</span> <span class="leaf-desc">&mdash; GitHub Actions for MATLAB tests</span></div></div>
+      <div class="leaf"><div class="leaf-check check-todo"></div><div><span class="leaf-name">Documentation site</span></div></div>
+    </div>
+  </div>
+
+</div><!-- end map -->
+
+<!-- ═══════════ PROJECT CONNECTIONS ═══════════ -->
+<div class="connections-section">
+  <h2 style="font-size:1.1rem; margin-bottom:4px;">How OpenSMC Feeds Other Projects</h2>
+  <p style="font-size:0.78rem; color:var(--muted); margin-bottom:12px;">Every module you add to OpenSMC amplifies all connected projects.</p>
+  <div class="conn-grid">
+    <div class="conn-card">
+      <h4><span class="conn-arrow">&rarr;</span> RL-Discovered Sliding Surfaces</h4>
+      <p>All 9 classical surfaces become baselines. RL agent must beat ALL of them. OpenSMC benchmark provides fair comparison.</p>
+      <p style="margin-top:4px;color:var(--accent);font-size:0.72rem;">D:/Ali_Kufa_University/Journals Paper/RL-Discovered-Sliding-Surfaces/</p>
+    </div>
+    <div class="conn-card">
+      <h4><span class="conn-arrow">&rarr;</span> ITSMC-ELM Master Thesis</h4>
+      <p>Student's quadrotor code is now a reusable OpenSMC module. Benchmarks quantify improvement over 7 other controllers.</p>
+      <p style="margin-top:4px;color:var(--accent);font-size:0.72rem;">RBF_ELM + ITSMC + Quadrotor6DOF + CascadedSMC</p>
+    </div>
+    <div class="conn-card">
+      <h4><span class="conn-arrow">&rarr;</span> NFTSMC Vibration Paper</h4>
+      <p>Nanopositioner model + NFTSMC controller ported. Can now benchmark against ClassicalSMC, AdaptiveSMC, etc. using OpenSMC.</p>
+      <p style="margin-top:4px;color:var(--accent);font-size:0.72rem;">695 nm RMS, 32 ms settling, 3-4x better than PPF/IRC</p>
+    </div>
+    <div class="conn-card">
+      <h4><span class="conn-arrow">&rarr;</span> Safe RL + TSMC-BLF</h4>
+      <p>Terminal surfaces and reaching laws provide infrastructure. OpenSMC can host the BLF-augmented controller.</p>
+      <p style="margin-top:4px;color:var(--accent);font-size:0.72rem;">D:/Ali_Kufa_University/Journals Paper/Safe_RL_TSMC/ — 50%</p>
+    </div>
+    <div class="conn-card">
+      <h4><span class="conn-arrow">&rarr;</span> Teaching (University of Kufa)</h4>
+      <p>Students run examples, swap surfaces, compare controllers. DCMotor and MassSpringDamper plants (Phase 4) are for teaching.</p>
+    </div>
+    <div class="conn-card">
+      <h4><span class="conn-arrow">&rarr;</span> Future Students</h4>
+      <p>Each thesis = new OpenSMC module. Ensures code reuse, fair comparison, and builds on prior work.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ NEXT ACTIONS ═══════════ -->
+<div style="padding:24px 32px 48px;">
+  <h2 style="font-size:1.1rem; margin-bottom:12px;">Next Actions (Priority Order)</h2>
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:10px;">
+    <div style="background:linear-gradient(135deg,rgba(39,174,96,0.15),rgba(39,174,96,0.05)); border:1px solid rgba(39,174,96,0.3); border-radius:10px; padding:14px;">
+      <div style="font-size:0.7rem; color:var(--done); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Step 1</div>
+      <div style="font-weight:600; margin:4px 0;">Validate in MATLAB</div>
+      <div style="font-size:0.78rem; color:var(--muted);">Run tests/run_all_tests.m &mdash; confirm 132/132 pass</div>
+    </div>
+    <div style="background:linear-gradient(135deg,rgba(88,166,255,0.15),rgba(88,166,255,0.05)); border:1px solid rgba(88,166,255,0.3); border-radius:10px; padding:14px;">
+      <div style="font-size:0.7rem; color:var(--accent); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Step 2</div>
+      <div style="font-weight:600; margin:4px 0;">Push to GitHub</div>
+      <div style="font-size:0.78rem; color:var(--muted);">Create Balghanimi/OpenSMC repo, push all code, add README + LICENSE (MIT)</div>
+    </div>
+    <div style="background:linear-gradient(135deg,rgba(88,166,255,0.15),rgba(88,166,255,0.05)); border:1px solid rgba(88,166,255,0.3); border-radius:10px; padding:14px;">
+      <div style="font-size:0.7rem; color:var(--accent); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Step 3</div>
+      <div style="font-weight:600; margin:4px 0;">Create Zenodo DOI</div>
+      <div style="font-size:0.78rem; color:var(--muted);">Required for SoftwareX submission &mdash; link GitHub release to Zenodo</div>
+    </div>
+    <div style="background:linear-gradient(135deg,rgba(243,156,18,0.15),rgba(243,156,18,0.05)); border:1px solid rgba(243,156,18,0.3); border-radius:10px; padding:14px;">
+      <div style="font-size:0.7rem; color:var(--partial); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Step 4</div>
+      <div style="font-weight:600; margin:4px 0;">Submit SoftwareX Paper</div>
+      <div style="font-size:0.78rem; color:var(--muted);">Draft is 100% done &mdash; just needs DOI link and final formatting</div>
+    </div>
+    <div style="background:linear-gradient(135deg,rgba(231,76,60,0.15),rgba(231,76,60,0.05)); border:1px solid rgba(231,76,60,0.3); border-radius:10px; padding:14px;">
+      <div style="font-size:0.7rem; color:var(--todo); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Step 5</div>
+      <div style="font-weight:600; margin:4px 0;">Start RL Integration (Phase 5)</div>
+      <div style="font-size:0.78rem; color:var(--muted);">Define RLDiscoveredSurface, connect to RL project, train PPO agent</div>
+    </div>
+    <div style="background:linear-gradient(135deg,rgba(231,76,60,0.15),rgba(231,76,60,0.05)); border:1px solid rgba(231,76,60,0.3); border-radius:10px; padding:14px;">
+      <div style="font-size:0.7rem; color:var(--todo); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Step 6</div>
+      <div style="font-weight:600; margin:4px 0;">Extract Ben (2013)</div>
+      <div style="font-size:0.78rem; color:var(--muted);">Sliding Mode Observer + ObserverBasedSMC architecture</div>
+    </div>
+  </div>
+</div>
+
+<div style="text-align:center; padding:16px; color:var(--muted); font-size:0.7rem; border-top:1px solid var(--border);">
+  OpenSMC &mdash; Ali Al Ghanimi, University of Kufa &mdash; Generated 2026-03-11 &mdash; D:/OpenSMC/
+</div>
+
+<script>
+function toggle(header) {
+  header.classList.toggle('expanded');
+  const body = header.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+function toggleAll(expand) {
+  document.querySelectorAll('.branch-header').forEach(h => {
+    const body = h.nextElementSibling;
+    if (expand) {
+      h.classList.add('expanded');
+      body.classList.add('open');
+    } else {
+      h.classList.remove('expanded');
+      body.classList.remove('open');
+    }
+  });
+}
+
+function filterStatus(status) {
+  document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + status).classList.add('active');
+
+  document.querySelectorAll('.branch').forEach(b => {
+    if (status === 'all') {
+      b.style.display = '';
+    } else {
+      b.style.display = b.dataset.status === status ? '' : 'none';
+    }
+  });
+}
+
+// Auto-expand on load
+toggleAll(true);
+</script>
+</body>
+</html>

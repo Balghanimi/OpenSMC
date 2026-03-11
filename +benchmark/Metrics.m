@@ -101,14 +101,16 @@ classdef Metrics
             if n_pos == floor(n_pos)
                 e = e(1:n_pos, :);
             end
-            ref_final = result.xref(1:size(e,1), end);
-            if norm(ref_final) == 0
+            % Normalize by max absolute reference (robust to sinusoidal/zero-crossing refs)
+            ref_pos = result.xref(1:size(e,1), :);
+            ref_scale = max(abs(ref_pos(:)));
+            if ref_scale < 1e-10
                 v = 0;
                 return;
             end
-            % Overshoot = max deviation beyond reference
+            % Overshoot = max deviation beyond reference, per time step
             x_pos = result.x(1:size(e,1), :);
-            overshoot_vals = (x_pos - ref_final) ./ abs(ref_final);
+            overshoot_vals = (x_pos - ref_pos) ./ ref_scale;
             v = max(overshoot_vals(:)) * 100;  % percentage
             v = max(v, 0);  % only positive overshoot
         end
@@ -153,6 +155,22 @@ classdef Metrics
             N = size(e, 2);
             tail = e(:, round(0.9*N):N);
             v = mean(vecnorm(tail, 2, 1));
+        end
+
+        function v = max_swing(result, angle_idx)
+            %MAX_SWING Maximum swing angle [rad] for underactuated systems.
+            %   angle_idx: row index of the swing angle in result.x (default 3).
+            if nargin < 2, angle_idx = 3; end
+            v = max(abs(result.x(angle_idx, :)));
+        end
+
+        function v = residual_swing(result, angle_idx)
+            %RESIDUAL_SWING RMS swing angle over last 20% of simulation [rad].
+            %   angle_idx: row index of the swing angle in result.x (default 3).
+            if nargin < 2, angle_idx = 3; end
+            N = size(result.x, 2);
+            tail = result.x(angle_idx, round(0.8*N):N);
+            v = sqrt(mean(tail.^2));
         end
     end
 end

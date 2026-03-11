@@ -50,6 +50,7 @@ classdef (Abstract) Plant < handle
     methods
         function info = describe(obj)
             info.name             = obj.name;
+            info.class            = class(obj);
             info.n_states         = obj.n_states;
             info.n_inputs         = obj.n_inputs;
             info.n_outputs        = obj.n_outputs;

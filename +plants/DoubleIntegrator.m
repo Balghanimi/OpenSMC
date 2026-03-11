@@ -31,7 +31,7 @@ classdef DoubleIntegrator < core.Plant
         end
 
         function xdot = dynamics(~, ~, x, u, d)
-            xdot = [x(2); u + d(1)];
+            xdot = [x(2); u] + d;
         end
 
         function y = output(~, x)

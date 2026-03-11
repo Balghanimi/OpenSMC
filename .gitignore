@@ -1,0 +1,16 @@
+*.asv
+*.mex*
+*.slx.r*
+slprj/
+*.autosave
+*.bak
+*.log
+*.aux
+*.out
+*.spl
+*.synctex.gz
+docs/*.aux
+docs/*.log
+docs/*.out
+docs/*.spl
+docs/*.synctex.gz

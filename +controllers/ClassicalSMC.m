@@ -53,7 +53,7 @@ classdef ClassicalSMC < core.Controller
             u_eq = 0;
 
             % Total control
-            u = u_eq + u_r - dhat(1:plant.n_inputs);
+            u = u_eq - u_r - dhat(1:plant.n_inputs);
 
             % Diagnostics
             info.s    = s;

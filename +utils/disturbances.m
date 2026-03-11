@@ -38,8 +38,14 @@ classdef disturbances
 
         function fn = composite(dist_fns)
             %COMPOSITE Sum of multiple disturbances.
-            fn = @(t) sum(cellfun(@(f) f(t), dist_fns, ...
-                'UniformOutput', false));
+            fn = @(t) composite_eval(t, dist_fns);
         end
+    end
+end
+
+function d = composite_eval(t, fns)
+    d = fns{1}(t);
+    for i = 2:numel(fns)
+        d = d + fns{i}(t);
     end
 end

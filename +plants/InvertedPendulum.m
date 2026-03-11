@@ -4,7 +4,7 @@ classdef InvertedPendulum < core.Plant
     %   Classic underactuated system: force applied to cart,
     %   pendulum must be stabilized upright.
     %
-    %   State: x = [cart_pos; theta; cart_vel; theta_dot]
+    %   State: x = [cart_pos; cart_vel; theta; theta_dot]
     %   Input: u = horizontal force on cart
     %   Underactuated: 2 DOF, 1 input
 
@@ -28,13 +28,13 @@ classdef InvertedPendulum < core.Plant
                 p.(varargin{i}) = varargin{i+1};
             end
             obj.params = p;
-            obj.x0     = [0; pi/6; 0; 0];  % pendulum tilted 30 deg
+            obj.x0     = [0; 0; pi/6; 0];  % pendulum tilted 30 deg
         end
 
         function xdot = dynamics(obj, ~, x, u, d)
             p = obj.params;
-            theta    = x(2);
-            xdot_val = x(3);
+            xdot_val = x(2);
+            theta    = x(3);
             thetadot = x(4);
 
             st = sin(theta);
@@ -47,16 +47,16 @@ classdef InvertedPendulum < core.Plant
                          - p.m*p.l*thetadot^2*st*ct ...
                          + (p.M + p.m)*p.g*st + d(2)) / (p.l * D);
 
-            xdot = [xdot_val; thetadot; xddot; thetaddot];
+            xdot = [xdot_val; xddot; thetadot; thetaddot];
         end
 
         function y = output(~, x)
-            y = x(1:2);  % cart position and angle
+            y = [x(1); x(3)];  % cart position and angle
         end
 
         function [e, edot] = get_error(~, x, xref)
-            e    = xref(1:2) - x(1:2);
-            edot = xref(3:4) - x(3:4);
+            e    = xref([1,3]) - x([1,3]);
+            edot = xref([2,4]) - x([2,4]);
         end
     end
 end
