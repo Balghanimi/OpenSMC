@@ -1,5 +1,7 @@
 # OpenSMC
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18965650.svg)](https://doi.org/10.5281/zenodo.18965650)
+
 **A modular, composable MATLAB toolbox for Sliding Mode Control research and benchmarking.**
 
 No equivalent open-source SMC toolbox exists. OpenSMC provides orthogonal, mix-and-match components — swap any sliding surface with any reaching law on any plant, and benchmark with standardized metrics.
