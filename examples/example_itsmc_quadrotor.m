@@ -25,17 +25,15 @@ t  = 0:dt:T;
 N  = length(t);
 
 %% 3. Reference Trajectory (circular with altitude variation)
-ramp = 1 ./ (1 + exp(-3*(t - 2)));  % smooth 0→1 transition
+ref_fn = utils.references.circular_3d(2.0, 0.5, 1.0, 0.3, 0.2);
 
-ref_x   = ramp .* 2 .* cos(0.5 * t);
-ref_y   = ramp .* 2 .* sin(0.5 * t);
-ref_z   = ramp .* (1 + 0.3 * sin(0.2 * t));
+% Pre-compute reference arrays for plotting
+ref_x = zeros(1, N); ref_y = zeros(1, N); ref_z = zeros(1, N);
+for j = 1:N
+    xr = ref_fn(t(j));
+    ref_x(j) = xr(1); ref_y(j) = xr(2); ref_z(j) = xr(3);
+end
 ref_psi = zeros(size(t));
-
-% Velocity reference (numerical)
-ref_dx = [0, diff(ref_x)] / dt;
-ref_dy = [0, diff(ref_y)] / dt;
-ref_dz = [0, diff(ref_z)] / dt;
 
 %% 4. External Disturbance
 rng(42);
@@ -83,8 +81,7 @@ for k = 1:N-1
     x_k = X(k,:)';
 
     % Build full reference (12-state)
-    xref = [ref_x(k); ref_y(k); ref_z(k); 0; 0; ref_psi(k); ...
-            ref_dx(k); ref_dy(k); ref_dz(k); 0; 0; 0];
+    xref = ref_fn(t(k));
 
     % Compute control
     [u_k, info_k] = arch.compute(t(k), x_k, xref, quad);

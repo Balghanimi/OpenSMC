@@ -13,24 +13,22 @@ plant        = plants.DoubleIntegrator('x0', [0; 0]);
 ref_fn       = utils.references.sinusoidal(1.0, 0.5, 2);  % sine wave
 dist_fn      = utils.disturbances.sinusoidal(0.3, 2.0, 2); % HF disturbance
 
-%% 5 different surfaces, SAME reaching law
-surface_configs = {
-    'Linear',             surfaces.LinearSurface('c', 10);
-    'Terminal',           surfaces.TerminalSurface('beta', 10, 'p', 5, 'q', 7);
-    'NonsingularTerminal', surfaces.NonsingularTerminalSurface('beta', 10, 'p', 7, 'q', 5);
-    'NFTSMC-Fast',        surfaces.NonsingularTerminalSurface('beta', 10, 'p', 7, 'q', 5, 'alpha', 0.5);
-    'IntegralTerminal',   surfaces.IntegralTerminalSurface('c1', 10, 'c2', 5, 'p', 5, 'q', 7);
+%% 5 surfaces, SAME reaching law
+surfaces_list = {
+    'Linear',              surfaces.LinearSurface('c', 10);
+    'Terminal',            surfaces.TerminalSurface('beta', 10, 'p', 5, 'q', 7);
+    'Nonsingular Terminal', surfaces.NonsingularTerminalSurface('beta', 10, 'p', 7, 'q', 5);
+    'Fast Terminal',       surfaces.NonsingularTerminalSurface('beta', 10, 'p', 7, 'q', 5, 'alpha', 0.5);
+    'Integral Terminal',   surfaces.IntegralTerminalSurface('c1', 10, 'c2', 5, 'p', 5, 'q', 7);
 };
 
-%% Build and register
+%% Build and benchmark
 runner = benchmark.BenchmarkRunner('dt', 1e-4, 'T', 10);
 
-for i = 1:size(surface_configs, 1)
-    name    = surface_configs{i, 1};
-    surface = surface_configs{i, 2};
-    ctrl    = controllers.ClassicalSMC(surface, reaching_law);
-    arch    = architectures.DirectSMC(ctrl);
-    runner.add_architecture(name, arch);
+for i = 1:size(surfaces_list, 1)
+    ctrl = controllers.ClassicalSMC(surfaces_list{i,2}, reaching_law);
+    arch = architectures.DirectSMC(ctrl);
+    runner.add_architecture(surfaces_list{i,1}, arch);
 end
 
 runner.add_plant('DoubleIntegrator', plant, ref_fn, dist_fn);

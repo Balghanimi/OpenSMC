@@ -15,12 +15,9 @@
 clear; clc; close all;
 addpath('..');
 
-%% 1. Create Plants
-crane_nom  = plants.SinglePendulumCrane('M', 37.32, 'm', 5, 'l', 1.05);
-crane_nom.x0 = zeros(4, 1);
-
-crane_dist = plants.SinglePendulumCrane('M', 37.32, 'm', 5, 'l', 1.05);
-crane_dist.x0 = zeros(4, 1);
+%% 1. Create Plant
+crane = plants.SinglePendulumCrane('M', 37.32, 'm', 5, 'l', 1.05);
+crane.x0 = zeros(4, 1);
 
 %% 2. Reference and Disturbance Functions
 ref_fn   = utils.references.transport(2.0, 4);
@@ -64,8 +61,8 @@ runner.add_architecture('AggregatedHSMC',  arch_agg);
 runner.add_architecture('IncrementalHSMC', arch_inc);
 runner.add_architecture('CombiningHSMC',   arch_cmb);
 
-runner.add_plant('Crane_Nominal',    crane_nom,  ref_fn, dist_none);
-runner.add_plant('Crane_Disturbed',  crane_dist, ref_fn, dist_sin);
+runner.add_plant('Crane_Nominal',   crane, ref_fn, dist_none);
+runner.add_plant('Crane_Disturbed', crane, ref_fn, dist_sin);
 
 fprintf('Starting HSMC benchmark (3 controllers x 2 scenarios)...\n');
 results = runner.run_all();

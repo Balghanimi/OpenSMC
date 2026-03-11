@@ -89,11 +89,22 @@ ClassicalSMC, AdaptiveSMC, DynamicSMC, AggregatedHSMC, IncrementalHSMC, Combinin
 | `example_benchmark_quadrotor.m` | Automated benchmark: ITSMC × 2 scenarios |
 | `example_nftsmc_nanopositioner.m` | NFTSMC vibration suppression on piezo stage |
 
+## Reproducibility
+
+All code listings in the [SoftwareX paper](docs/softwarex_paper.pdf) are verbatim excerpts from the example files in this repository. To reproduce the paper's benchmark tables:
+
+```matlab
+cd D:/OpenSMC/examples
+example_surface_swap           % → Table 2 (surface swap results)
+example_benchmark_crane        % → Table 3 (HSMC crane results)
+example_itsmc_quadrotor        % → Table 4 (quadrotor results)
+```
+
 ## Running Tests
 
 ```matlab
 cd D:/OpenSMC
-run('tests/run_all_tests.m')
+run('tests/run_all_tests.m')   % 132 tests, all passing
 ```
 
 ## References
