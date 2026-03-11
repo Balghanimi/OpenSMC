@@ -48,7 +48,7 @@
              country={Iraq}}
 
 \begin{abstract}
-Sliding mode control (SMC) is a robust nonlinear control methodology with strong theoretical guarantees, yet no comprehensive open-source software toolbox exists for the systematic implementation, comparison, and benchmarking of its many variants. This paper presents \textbf{OpenSMC}, a modular MATLAB toolbox that decomposes the SMC design problem into six orthogonal, composable abstractions: sliding surfaces, reaching laws, controllers, estimators, plants, and architectures. These components can be freely combined, enabling researchers to isolate the effect of individual design choices through controlled experiments. OpenSMC provides 9~sliding surfaces (from linear to fast terminal), 5~reaching laws (including super-twisting), 7~controller types (classical through integral terminal SMC with neural network estimation), 6~disturbance estimators (including RBF-ELM), 5~benchmark plants (from double integrators to 6-DOF quadrotors), and 2~control architectures (direct and cascaded). A standardized benchmarking framework with 12~performance metrics enables fair, reproducible comparisons. The toolbox comprises 59~MATLAB files totaling approximately 5,400~lines of code (including 118~unit and integration tests), is freely available under the MIT license, and fills a significant gap in the SMC research software ecosystem.
+Sliding mode control (SMC) is a robust nonlinear control methodology with strong theoretical guarantees, yet no comprehensive open-source software toolbox exists for the systematic implementation, comparison, and benchmarking of its many variants. This paper presents \textbf{OpenSMC}, a modular MATLAB toolbox that decomposes the SMC design problem into six orthogonal, composable abstractions: sliding surfaces, reaching laws, controllers, estimators, plants, and architectures. These components can be freely combined, enabling researchers to isolate the effect of individual design choices through controlled experiments. OpenSMC provides 9~sliding surfaces (from linear to fast terminal), 5~reaching laws (including super-twisting), 7~controller types (classical through integral terminal SMC with neural network estimation), 6~disturbance estimators (including RBF-ELM), 5~benchmark plants (from double integrators to 6-DOF quadrotors), and 2~control architectures (direct and cascaded). A standardized benchmarking framework with 12~performance metrics enables fair, reproducible comparisons. The toolbox comprises 63~MATLAB files totaling approximately 6,200~lines of code (including 132~unit and integration tests), is freely available under the MIT license, and fills a significant gap in the SMC research software ecosystem.
 \end{abstract}
 
 \begin{keyword}
@@ -73,7 +73,7 @@ S1 & Current software version: 1.0 \\
 \hline
 S2 & Permanent link to executables of this version: \url{https://github.com/Balghanimi/OpenSMC} \\
 \hline
-S3 & Permanent link to reproducible capsule: -- \\
+S3 & Permanent link to reproducible capsule: \url{https://doi.org/10.5281/zenodo.18965650} \\
 \hline
 S4 & Legal software license: MIT \\
 \hline
@@ -435,26 +435,26 @@ Fig.~\ref{fig:results} shows representative results from this example, demonstra
 \section{Validation}
 \label{sec:validation}
 
-OpenSMC includes a comprehensive test suite comprising 118~unit and integration tests organized across seven test files (Table~\ref{tab:tests}). All tests pass on MATLAB R2023b (Windows~11) using the built-in \texttt{matlab.unittest} framework, requiring no additional toolboxes.
+OpenSMC includes a comprehensive test suite comprising 132~unit and integration tests organized across seven test files (Table~\ref{tab:tests}). All tests pass on MATLAB R2023b (Windows~11) using the built-in \texttt{matlab.unittest} framework, requiring no additional toolboxes.
 
 \begin{table}[t]
 \centering
 \small
-\caption{OpenSMC test suite summary (118 tests, all passing).}
+\caption{OpenSMC test suite summary (132 tests, all passing).}
 \label{tab:tests}
 \begin{tabular}{lrl}
 \toprule
 \textbf{Test file} & \textbf{Tests} & \textbf{Scope} \\
 \midrule
-\texttt{test\_surfaces.m}       & 36 & Surface computation, dimensions, edge cases \\
-\texttt{test\_reaching.m}       & 20 & Reaching law output, sign consistency \\
-\texttt{test\_controllers.m}    & 11 & Controller compute, output dimensions \\
+\texttt{test\_surfaces.m}       & 20 & Surface computation, dimensions, edge cases \\
+\texttt{test\_reaching.m}       & 19 & Reaching law output, sign consistency \\
+\texttt{test\_plants.m}         & 33 & Plant dynamics, state ordering, error computation \\
+\texttt{test\_controllers.m}    & 15 & Controller compute, output dimensions \\
 \texttt{test\_estimators.m}     & 15 & Estimator interfaces, online updates, RBF-ELM \\
-\texttt{test\_plants.m}         & 20 & Plant dynamics, state ordering, error computation \\
-\texttt{test\_benchmark.m}      & 12 & Simulator, metrics, end-to-end tracking \\
-\texttt{test\_architectures.m}  &  4 & Direct and cascaded architecture wrappers \\
+\texttt{test\_benchmark.m}      & 17 & Simulator, metrics, references, disturbances \\
+\texttt{test\_integration.m}    & 13 & End-to-end composed systems, architecture wrappers \\
 \midrule
-\textbf{Total}                  & \textbf{118} & \\
+\textbf{Total}                  & \textbf{132} & \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -529,7 +529,7 @@ OpenSMC is freely available under the MIT license and is intended to grow as a c
 %% ====================================================================
 \section*{Code availability}
 
-The source code of OpenSMC is available at \url{https://github.com/Balghanimi/OpenSMC} under the MIT license. The repository includes all source files, examples, tests, and documentation. The toolbox requires MATLAB R2020b or later with no additional toolboxes. Version~1.0, as described in this paper, comprises 59~MATLAB files totaling approximately 5,400~lines of code, including 118~unit and integration tests.
+The source code of OpenSMC is available at \url{https://github.com/Balghanimi/OpenSMC} under the MIT license. The repository includes all source files, examples, tests, and documentation. The toolbox requires MATLAB R2020b or later with no additional toolboxes. Version~1.0, as described in this paper, comprises 63~MATLAB files totaling approximately 6,200~lines of code, including 132~unit and integration tests. The archived release is available at \url{https://doi.org/10.5281/zenodo.18965650}.
 
 
 %% ====================================================================
