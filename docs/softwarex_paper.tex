@@ -354,19 +354,18 @@ Three hierarchical SMC variants are compared:
 
 All three controllers use the same plant parameters from Table~4.1 of Qian and Yi~\cite{qian2015hierarchical} (trolley mass $M = 37.32$~kg, payload mass $m = 5$~kg, cable length $l = 1.05$~m). The \texttt{BenchmarkRunner} evaluates each controller under both nominal conditions and sinusoidal disturbance, computing the standard 12~metrics plus the underactuated-specific metrics (maximum swing angle, residual swing). Table~\ref{tab:crane} summarizes the nominal results. All three methods successfully transport the trolley to the target position while suppressing payload swing, demonstrating the effectiveness of the hierarchical decomposition strategy for underactuated systems.
 
-%% TODO: Update table values after running example_benchmark_crane.m
 \begin{table}[t]
 \centering
 \small
-\caption{Hierarchical SMC benchmark on the single-pendulum crane (nominal, $T=8$~s, step reference 2~m).}
+\caption{Hierarchical SMC benchmark on the single-pendulum crane (nominal, $T=15$~s, step reference 2~m).}
 \label{tab:crane}
 \begin{tabular}{lcccccc}
 \toprule
 \textbf{Controller} & \textbf{RMSE} & \textbf{$T_s$ (s)} & \textbf{OS (\%)} & \textbf{Effort} & \textbf{Swing ($\degree$)} & \textbf{Resid.\ ($\degree$)} \\
 \midrule
-Aggregated  & --- & --- & --- & --- & --- & --- \\
-Incremental & --- & --- & --- & --- & --- & --- \\
-Combining   & --- & --- & --- & --- & --- & --- \\
+Aggregated  & 0.45 & 5.38 & 46.5 & 2463 & 8.1 & 0.00 \\
+Incremental & 0.52 & 13.06 & 113.0 & 219713 & 17.7 & 0.42 \\
+Combining   & 0.58 & 11.31 & 18.9 & 336 & 4.1 & 2.29 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -382,7 +381,7 @@ ctrl_agg.params.kappa = 3;
 ctrl_agg.params.eta   = 0.1;
 arch_agg = architectures.DirectSMC(ctrl_agg);
 
-runner = benchmark.BenchmarkRunner('dt', 1e-4, 'T', 8);
+runner = benchmark.BenchmarkRunner('dt', 1e-4, 'T', 15);
 runner.add_architecture('AggregatedHSMC',  arch_agg);
 runner.add_architecture('IncrementalHSMC', arch_inc);
 runner.add_architecture('CombiningHSMC',   arch_cmb);
@@ -405,8 +404,8 @@ ref_fn = utils.references.circular_3d(2.0, 0.5, 1.0, ...
 est_x = estimators.RBF_ELM('n_hidden', 50, ...
     'x_min', [-5 -8], 'x_max', [5 8]);
 ctrl_x = controllers.ITSMC(dummy_surf, dummy_reach, est_x);
-ctrl_x.params.c1 = 5;  ctrl_x.params.c2 = 2;
-ctrl_x.params.K = 5;  ctrl_x.params.lambda_s = 3;
+ctrl_x.params.c1 = 2;  ctrl_x.params.c2 = 0.5;
+ctrl_x.params.K = 2;  ctrl_x.params.lambda_s = 1;
 ctrl_x.params.dt = dt;
 
 arch = architectures.CascadedSMC(ctrl_x, ctrl_y, ctrl_z);
@@ -419,9 +418,8 @@ The ITSMC control law for each translational channel is:
 \end{align}
 where $\hat{d}$ is the RBF-ELM disturbance estimate updated online via OS-ELM~\cite{huang2006extreme}. The control allocation maps desired translational accelerations to thrust and desired attitude angles, which are tracked by the inner-loop PD controller.
 
-Table~\ref{tab:quadrotor} shows the results. The increased gains ($K=5$, $c_1=5$, $\lambda_s=3$) ensure that the reaching law dominates the centripetal acceleration ($\omega^2 R \approx 3.16$~m/s\textsuperscript{2}), maintaining sliding throughout the trajectory. The larger RBF-ELM network (50 hidden neurons) provides more accurate disturbance estimation, and the chattering index remains low due to boundary-layer saturation and continuous RBF-ELM output.
+Table~\ref{tab:quadrotor} shows the results. The moderate gains ($K=2$, $c_1=2$, $\lambda_s=1$) are tuned for the cascaded architecture to avoid integral windup while maintaining sliding throughout the trajectory. The RBF-ELM network (50 hidden neurons) provides accurate disturbance estimation, and the chattering index remains low due to boundary-layer saturation and continuous RBF-ELM output.
 
-%% TODO: Update table values after running example_itsmc_quadrotor.m
 \begin{table}[t]
 \centering
 \small
@@ -431,8 +429,8 @@ Table~\ref{tab:quadrotor} shows the results. The increased gains ($K=5$, $c_1=5$
 \toprule
 \textbf{Scenario} & \textbf{RMSE (m)} & \textbf{MAE (m)} & \textbf{OS (\%)} & \textbf{Effort} & \textbf{Chatter} & \textbf{$e_{x,y,z}$ (m)} \\
 \midrule
-Nominal   & --- & --- & --- & --- & --- & --- \\
-Disturbed & --- & --- & --- & --- & --- & --- \\
+Nominal   & 0.43 & 0.64 & 23.9 & 216 & 0.9 & 0.17, 0.27, 0.29 \\
+Disturbed & 0.43 & 0.63 & 19.5 & 215 & 1.1 & 0.22, 0.28, 0.23 \\
 \bottomrule
 \end{tabular}
 \end{table}

@@ -46,6 +46,7 @@ classdef CombiningHSMC < core.Controller
             p.alpha = 0.487;
             p.kappa = 4;
             p.eta   = 0.1;
+            p.u_max = Inf;
             obj.params = p;
             obj.state  = struct();
         end
@@ -81,8 +82,11 @@ classdef CombiningHSMC < core.Controller
             % Switching control (drives s → 0)
             usw = (p.kappa * s + p.eta * sign(s)) / den;
 
-            % Total control
+            % Total control (with optional saturation)
             u = ueq + usw;
+            if isfinite(p.u_max)
+                u = max(-p.u_max, min(p.u_max, u));
+            end
 
             % Estimate disturbance (optional compensation)
             y = plant.output(x);

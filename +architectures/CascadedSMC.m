@@ -71,8 +71,15 @@ classdef CascadedSMC < core.Architecture
             end
 
             % Thrust magnitude
-            U1 = pp.m * sqrt(ax_des^2 + ay_des^2 + (az_des + pp.g)^2);
-            U1 = max(0.1 * pp.m * pp.g, min(U1, 2.5 * pp.m * pp.g));
+            % Guard against negative Z-force demand (az_des + g < 0)
+            % which would cause sqrt to produce thrust in the wrong
+            % direction.  When this occurs, reduce to minimum thrust.
+            if az_des + pp.g < 0
+                U1 = 0.1 * pp.m * pp.g;
+            else
+                U1 = pp.m * sqrt(ax_des^2 + ay_des^2 + (az_des + pp.g)^2);
+                U1 = max(0.1 * pp.m * pp.g, min(U1, 2.5 * pp.m * pp.g));
+            end
 
             % Desired roll (phi)
             arg_phi = pp.m * (ax_des*sin(psi_ref) - ay_des*cos(psi_ref)) / U1;

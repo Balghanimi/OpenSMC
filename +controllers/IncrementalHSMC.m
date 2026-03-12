@@ -30,6 +30,8 @@ classdef IncrementalHSMC < core.Controller
 
     properties
         name = 'IncrementalHSMC'
+        % u_max: optional control saturation to prevent blowup from
+        % sign-switching discontinuity (set 0 or Inf to disable)
     end
 
     methods
@@ -46,6 +48,7 @@ classdef IncrementalHSMC < core.Controller
             p.c3    = 0.4;
             p.kappa = 3;
             p.eta   = 0.1;
+            p.u_max = Inf;
             obj.params = p;
             obj.state  = struct();
         end
@@ -60,7 +63,9 @@ classdef IncrementalHSMC < core.Controller
             s1 = p.c1 * e(1) + e(2);
 
             % Sign-switching rule for c2 (Eq. 4.34)
-            if x(3) * s1 >= 0
+            % Book uses state-based s1_book = c1*x1 + x2; ours is error-based
+            % s1 = c1*e1 + e2 = -s1_book, so the condition flips sign.
+            if x(3) * s1 <= 0
                 c2_eff = abs(p.c2);
             else
                 c2_eff = -abs(p.c2);
@@ -82,8 +87,11 @@ classdef IncrementalHSMC < core.Controller
             % Switching control (Eq. 4.32)
             usw = (p.kappa * s3 + p.eta * sign(s3)) / den;
 
-            % Total control
+            % Total control (with optional saturation)
             u = ueq + usw;
+            if isfinite(p.u_max)
+                u = max(-p.u_max, min(p.u_max, u));
+            end
 
             % Estimate disturbance (optional compensation)
             y = plant.output(x);
