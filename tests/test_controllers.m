@@ -224,6 +224,115 @@ classdef test_controllers < matlab.unittest.TestCase
             testCase.verifyLessThanOrEqual(abs(u), 5);
         end
 
+        %% === FuzzySMC ===
+        function test_fuzzy_basic(testCase)
+            surf  = surfaces.LinearSurface('c', 5);
+            reach = reaching.ConstantRate('k', 10);
+            ctrl  = controllers.FuzzySMC(surf, reach);
+            plant = plants.DoubleIntegrator();
+
+            x = [1; 0]; xref = [0; 0];
+            [u, info] = ctrl.compute(0, x, xref, plant);
+
+            testCase.verifyTrue(isnumeric(u));
+            testCase.verifyTrue(isfield(info, 's'));
+            testCase.verifyTrue(isfield(info, 'k_fuzzy'));
+        end
+
+        function test_fuzzy_zero_error(testCase)
+            surf  = surfaces.LinearSurface('c', 5);
+            reach = reaching.ConstantRate('k', 10);
+            ctrl  = controllers.FuzzySMC(surf, reach);
+            plant = plants.DoubleIntegrator();
+
+            [u, info] = ctrl.compute(0, [0;0], [0;0], plant);
+            % At zero error, s=0 => fuzzy output ~0 => u ~0
+            testCase.verifyEqual(u, 0, 'AbsTol', 1);
+        end
+
+        function test_fuzzy_reset(testCase)
+            surf  = surfaces.LinearSurface('c', 5);
+            reach = reaching.ConstantRate('k', 10);
+            ctrl  = controllers.FuzzySMC(surf, reach);
+            ctrl.reset();
+            testCase.verifyEqual(ctrl.state.s_prev, 0);
+        end
+
+        %% === DiscreteSMC ===
+        function test_discrete_basic(testCase)
+            surf  = surfaces.LinearSurface('c', 5);
+            reach = reaching.ConstantRate('k', 10);
+            ctrl  = controllers.DiscreteSMC(surf, reach);
+            plant = plants.DoubleIntegrator();
+
+            x = [1; 0]; xref = [0; 0];
+            [u, info] = ctrl.compute(0, x, xref, plant);
+
+            testCase.verifyTrue(isnumeric(u));
+            testCase.verifyTrue(isfield(info, 's'));
+        end
+
+        function test_discrete_zero_order_hold(testCase)
+            surf  = surfaces.LinearSurface('c', 5);
+            reach = reaching.ConstantRate('k', 10);
+            ctrl  = controllers.DiscreteSMC(surf, reach);
+            ctrl.params.Ts = 0.01;
+            plant = plants.DoubleIntegrator();
+
+            x = [1; 0]; xref = [0; 0];
+            [u1, ~] = ctrl.compute(0, x, xref, plant);
+            % Within same sampling period, output should be held
+            [u2, ~] = ctrl.compute(0.005, x, xref, plant);
+            testCase.verifyEqual(u1, u2, 'AbsTol', 1e-10);
+        end
+
+        function test_discrete_reset(testCase)
+            surf  = surfaces.LinearSurface('c', 5);
+            reach = reaching.ConstantRate('k', 10);
+            ctrl  = controllers.DiscreteSMC(surf, reach);
+            ctrl.reset();
+            testCase.verifyEqual(ctrl.state.t_last, -inf);
+        end
+
+        %% === FixedTimeSMC ===
+        function test_fixedtime_basic(testCase)
+            surf  = surfaces.LinearSurface('c', 5);
+            reach = reaching.ConstantRate('k', 10);
+            ctrl  = controllers.FixedTimeSMC(surf, reach);
+            plant = plants.DoubleIntegrator();
+
+            x = [1; 0]; xref = [0; 0];
+            [u, info] = ctrl.compute(0, x, xref, plant);
+
+            testCase.verifyTrue(isnumeric(u));
+            testCase.verifyTrue(isfield(info, 'T_max'));
+            testCase.verifyGreaterThan(info.T_max, 0);
+        end
+
+        function test_fixedtime_settling_bound(testCase)
+            surf  = surfaces.LinearSurface('c', 5);
+            reach = reaching.ConstantRate('k', 10);
+            ctrl  = controllers.FixedTimeSMC(surf, reach);
+            ctrl.params.alpha = 10;
+            ctrl.params.beta = 10;
+            ctrl.params.p = 0.5;
+            ctrl.params.q = 1.5;
+
+            T = ctrl.get_max_settling_time();
+            expected = 1/(10*0.5) + 1/(10*0.5);
+            testCase.verifyEqual(T, expected, 'AbsTol', 1e-10);
+        end
+
+        function test_fixedtime_zero_error(testCase)
+            surf  = surfaces.LinearSurface('c', 5);
+            reach = reaching.ConstantRate('k', 10);
+            ctrl  = controllers.FixedTimeSMC(surf, reach);
+            plant = plants.DoubleIntegrator();
+
+            [u, ~] = ctrl.compute(0, [0;0], [0;0], plant);
+            testCase.verifyEqual(u, 0, 'AbsTol', 1e-10);
+        end
+
         %% === All Controllers ===
         function test_all_controllers_have_name(testCase)
             dummy_s = surfaces.LinearSurface();
@@ -235,7 +344,10 @@ classdef test_controllers < matlab.unittest.TestCase
                 controllers.IncrementalHSMC(dummy_s, dummy_r), ...
                 controllers.CombiningHSMC(dummy_s, dummy_r), ...
                 controllers.ITSMC(dummy_s, dummy_r), ...
-                controllers.NFTSMC(dummy_s, dummy_r)
+                controllers.NFTSMC(dummy_s, dummy_r), ...
+                controllers.FuzzySMC(dummy_s, dummy_r), ...
+                controllers.DiscreteSMC(dummy_s, dummy_r), ...
+                controllers.FixedTimeSMC(dummy_s, dummy_r)
             };
             for i = 1:numel(ctrls)
                 testCase.verifyNotEmpty(ctrls{i}.name);

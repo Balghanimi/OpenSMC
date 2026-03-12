@@ -48,7 +48,7 @@
              country={Iraq}}
 
 \begin{abstract}
-Sliding mode control (SMC) is a robust nonlinear control methodology with strong theoretical guarantees, yet no comprehensive open-source software toolbox exists for the systematic implementation, comparison, and benchmarking of its many variants. This paper presents \textbf{OpenSMC}, a modular MATLAB toolbox that decomposes the SMC design problem into six orthogonal, composable abstractions: sliding surfaces, reaching laws, controllers, estimators, plants, and architectures. These components can be freely combined, enabling researchers to isolate the effect of individual design choices through controlled experiments. OpenSMC provides 9~sliding surfaces (from linear to fast terminal), 5~reaching laws (including super-twisting), 8~controller types (classical through nonsingular fast terminal SMC and integral terminal SMC with neural network estimation), 6~disturbance estimators (including RBF-ELM), 6~benchmark plants (from double integrators to 6-DOF quadrotors and dual-stage nanopositioners), and 2~control architectures (direct and cascaded). A standardized benchmarking framework with 12~performance metrics enables fair, reproducible comparisons. The toolbox comprises 63~MATLAB files totaling approximately 6,200~lines of code (including 132~unit and integration tests), is freely available under the MIT license, and fills a significant gap in the SMC research software ecosystem.
+Sliding mode control (SMC) is a robust nonlinear control methodology with strong theoretical guarantees, yet no comprehensive open-source software toolbox exists for the systematic implementation, comparison, and benchmarking of its many variants. This paper presents \textbf{OpenSMC}, a modular MATLAB toolbox that decomposes the SMC design problem into six orthogonal, composable abstractions: sliding surfaces, reaching laws, controllers, estimators, plants, and architectures. These components can be freely combined, enabling researchers to isolate the effect of individual design choices through controlled experiments. OpenSMC provides 11~sliding surfaces (from linear to predefined-time convergence), 5~reaching laws (including super-twisting), 11~controller types (classical through fixed-time SMC and fuzzy SMC with Mamdani inference), 7~disturbance estimators (including RBF-ELM and Levant's arbitrary-order differentiator), 9~benchmark plants (from double integrators to 6-DOF quadrotors, robot arms, PMSM motors, and surface vessels), and 2~control architectures (direct and cascaded). A standardized benchmarking framework with 12~performance metrics enables fair, reproducible comparisons. The toolbox comprises 81~MATLAB files totaling approximately 9,000~lines of code (including 170~unit and integration tests plus 40~analytical validation tests), is freely available under the MIT license, and fills a significant gap in the SMC research software ecosystem.
 \end{abstract}
 
 \begin{keyword}
@@ -150,16 +150,16 @@ OpenSMC is organized around six abstract base classes (interfaces) that define t
 \begin{verbatim}
 OpenSMC/
   +core/          % 6 abstract interfaces
-  +surfaces/      % 9 sliding surface implementations
+  +surfaces/      % 11 sliding surface implementations
   +reaching/      % 5 reaching law implementations
-  +controllers/   % 8 controller implementations
-  +estimators/    % 6 estimator implementations
-  +plants/        % 6 plant models
+  +controllers/   % 11 controller implementations
+  +estimators/    % 7 estimator implementations
+  +plants/        % 9 plant models
   +architectures/ % 2 control architectures
   +benchmark/     % Simulator, Metrics, BenchmarkRunner
   +utils/         % Reference generators, disturbance profiles
-  examples/       % 7 complete worked examples
-  tests/          % Unit and integration tests
+  examples/       % 9 complete worked examples
+  tests/          % 210 unit, integration, and validation tests
 \end{verbatim}
 
 The six core abstractions and their relationships are depicted in Fig.~\ref{fig:architecture} and summarized below.
@@ -171,7 +171,7 @@ The six core abstractions and their relationships are depicted in Fig.~\ref{fig:
     \label{fig:architecture}
 \end{figure}
 
-\paragraph{SlidingSurface.} Defines the sliding variable $\mathbf{s} = f(\mathbf{e}, \dot{\mathbf{e}}, \int\mathbf{e}, t)$ where $\mathbf{e}$ is the tracking error. Each implementation computes $\mathbf{s}$ from error signals without knowledge of the reaching law or controller. The nine available surfaces are:
+\paragraph{SlidingSurface.} Defines the sliding variable $\mathbf{s} = f(\mathbf{e}, \dot{\mathbf{e}}, \int\mathbf{e}, t)$ where $\mathbf{e}$ is the tracking error. Each implementation computes $\mathbf{s}$ from error signals without knowledge of the reaching law or controller. The eleven available surfaces are:
 \begin{enumerate}
     \item \texttt{LinearSurface}: $s = \dot{e} + c \cdot e$~\cite{utkin1977variable}
     \item \texttt{TerminalSurface}: $s = \dot{e} + \beta |e|^{p/q} \operatorname{sgn}(e)$~\cite{yu2009terminal}
@@ -182,6 +182,8 @@ The six core abstractions and their relationships are depicted in Fig.~\ref{fig:
     \item \texttt{PIDSurface}: $s = \dot{e} + c_p \cdot e + c_i \int e\,dt$, mapping PID structure into the SMC framework
     \item \texttt{HierarchicalSurface}: multilayer surface for underactuated systems~\cite{qian2015hierarchical}
     \item \texttt{NonlinearDampingSurface}: incorporates state-dependent damping for improved transient performance~\cite{bandyopadhyay2009sliding}
+    \item \texttt{GlobalSurface}: $s = \dot{e} + ce - (\dot{e}_0 + ce_0)e^{-\alpha t}$, guarantees $s(0) = 0$ by construction, eliminating the reaching phase~\cite{bartoszewicz1998discrete}
+    \item \texttt{PredefinedTimeSurface}: $s = \dot{e} + \frac{\pi}{2T_c \cos(\pi t / 2T_c)} e$ for $t < T_c$, forces convergence before a user-specified time $T_c$~\cite{sancheztorres2018predefined}
 \end{enumerate}
 
 \paragraph{ReachingLaw.} Determines the discontinuous control component $u_r(s)$ that drives the state toward the sliding manifold. Five laws are provided:
@@ -193,7 +195,7 @@ The six core abstractions and their relationships are depicted in Fig.~\ref{fig:
     \item \texttt{Saturation}: $u_r = -k\operatorname{sat}(s/\phi)$ --- boundary-layer approximation for chatter reduction~\cite{edwards1998sliding}
 \end{enumerate}
 
-\paragraph{Estimator.} Provides online estimates of lumped disturbances $\hat{d}(t)$, decoupling the robustness mechanism from the surface design. Six estimators are available:
+\paragraph{Estimator.} Provides online estimates of lumped disturbances $\hat{d}(t)$, decoupling the robustness mechanism from the surface design. Seven estimators are available:
 \begin{enumerate}
     \item \texttt{NoEstimator}: returns zero (baseline for pure switching-based robustness)
     \item \texttt{DisturbanceObserver}: linear disturbance observer with low-pass filter
@@ -201,9 +203,10 @@ The six core abstractions and their relationships are depicted in Fig.~\ref{fig:
     \item \texttt{HighGainObserver}: high-gain observer for systems in observability canonical form
     \item \texttt{IntegralChainDifferentiator}: cascaded integrator-based numerical differentiator
     \item \texttt{RBF\_ELM}: radial basis function network with extreme learning machine output weights~\cite{huang2006extreme}, featuring online sequential adaptation via the Woodbury matrix identity
+    \item \texttt{LevantDifferentiator}: arbitrary-order higher-order sliding mode differentiator~\cite{levant2003higher}, recovering derivatives $f^{(1)}, \ldots, f^{(n)}$ from noisy signal measurements with finite-time convergence
 \end{enumerate}
 
-\paragraph{Controller.} Combines a surface, reaching law, and estimator into a complete control law $u = u_{eq} - u_r - \hat{d}$, where $u_{eq}$ is the equivalent control that cancels the surface dynamics, $u_r$ is the reaching law output (representing the desired $\dot{s}$), and $\hat{d}$ is the estimated disturbance. Eight controller types are implemented:
+\paragraph{Controller.} Combines a surface, reaching law, and estimator into a complete control law $u = u_{eq} - u_r - \hat{d}$, where $u_{eq}$ is the equivalent control that cancels the surface dynamics, $u_r$ is the reaching law output (representing the desired $\dot{s}$), and $\hat{d}$ is the estimated disturbance. Eleven controller types are implemented:
 \begin{enumerate}
     \item \texttt{ClassicalSMC}: standard SMC combining any surface with any reaching law~\cite{utkin1977variable,edwards1998sliding}
     \item \texttt{AdaptiveSMC}: online gain adaptation to reduce conservatism
@@ -213,9 +216,12 @@ The six core abstractions and their relationships are depicted in Fig.~\ref{fig:
     \item \texttt{CombiningHSMC}: intermediate variable-based hierarchical SMC~\cite{qian2015hierarchical}
     \item \texttt{NFTSMC}: nonsingular fast terminal SMC with feedforward compensation and integral action for precision tracking~\cite{feng2014non}
     \item \texttt{ITSMC}: integral terminal SMC with RBF-ELM disturbance compensation, featuring Lyapunov-based online weight updates
+    \item \texttt{FuzzySMC}: Mamdani fuzzy inference engine replacing the discontinuous $\operatorname{sgn}(s)$ with a smooth fuzzy output~\cite{khanesar2021fuzzy}, using 5~membership functions for $s$, 3~for $\dot{s}$, and 15~rules; requires no Fuzzy Logic Toolbox
+    \item \texttt{DiscreteSMC}: discrete-time reaching law $s(k\!+\!1) = (1\!-\!qT)s(k) - \epsilon T \operatorname{sgn}(s(k))$~\cite{gao1995discrete} with zero-order hold between sampling instants, designed for digital implementations
+    \item \texttt{FixedTimeSMC}: bi-power reaching law $u_r = \alpha |s|^p \operatorname{sgn}(s) + \beta |s|^q \operatorname{sgn}(s)$, $0\!<\!p\!<\!1\!<\!q$, guaranteeing convergence within $T_{\max} \leq \frac{1}{\alpha(1-p)} + \frac{1}{\beta(q-1)}$ regardless of initial conditions~\cite{polyakov2012fixed}
 \end{enumerate}
 
-\paragraph{Plant.} Provides the dynamical system model with a standardized interface: \texttt{dynamics(t, x, u, d)} for the ODE, \texttt{output(x)} for measurements, and \texttt{get\_error(x, xref)} for plant-specific error computation. Six benchmark plants span the complexity range:
+\paragraph{Plant.} Provides the dynamical system model with a standardized interface: \texttt{dynamics(t, x, u, d)} for the ODE, \texttt{output(x)} for measurements, and \texttt{get\_error(x, xref)} for plant-specific error computation. Nine benchmark plants span the complexity range:
 \begin{enumerate}
     \item \texttt{DoubleIntegrator}: canonical second-order system ($n=2$, $m=1$), fully actuated
     \item \texttt{InvertedPendulum}: cart-pole system ($n=4$, $m=1$), underactuated (force on cart only, pendulum unactuated)
@@ -223,6 +229,9 @@ The six core abstractions and their relationships are depicted in Fig.~\ref{fig:
     \item \texttt{DoublePendulumCrane}: dual-pendulum crane ($n=6$, $m=1$), severely underactuated
     \item \texttt{Quadrotor6DOF}: full 6-DOF quadrotor with Newton--Euler dynamics ($n=12$, $m=4$), underactuated
     \item \texttt{DualStageNanopositioner}: piezoelectric dual-stage nanopositioner ($n=4$, $m=1$), two-mode dynamics with voltage clamping
+    \item \texttt{TwoLinkArm}: 2-DOF robot manipulator with full Lagrangian dynamics ($n=4$, $m=2$), including mass matrix $M(q)$, Coriolis/centripetal $C(q,\dot{q})\dot{q}$, and gravity $G(q)$~\cite{slotine1991applied}
+    \item \texttt{PMSM}: permanent magnet synchronous motor in the $dq$-frame ($n=4$, $m=2$), including back-EMF coupling, reluctance torque, and voltage clamping~\cite{krause2013analysis}
+    \item \texttt{SurfaceVessel}: 3-DOF marine surface vessel (surge, sway, yaw) with added mass, Coriolis, and quadratic damping ($n=6$, $m=3$)~\cite{fossen2011handbook}
 \end{enumerate}
 
 \paragraph{Architecture.} Defines how controllers are composed for a given plant topology. Two architectures are provided:
@@ -442,33 +451,46 @@ Fig.~\ref{fig:results} shows representative results from this example, demonstra
 \section{Validation}
 \label{sec:validation}
 
-OpenSMC includes a comprehensive test suite comprising 132~unit and integration tests organized across seven test files (Table~\ref{tab:tests}). All tests pass on MATLAB R2023b (Windows~11) using the built-in \texttt{matlab.unittest} framework, requiring no additional toolboxes.
+OpenSMC includes a comprehensive test suite comprising 210~tests organized across seven unit/integration test files and six analytical validation scripts (Table~\ref{tab:tests}). All tests pass on MATLAB R2023b (Windows~11) using the built-in \texttt{matlab.unittest} framework, requiring no additional toolboxes.
 
 \begin{table}[t]
 \centering
 \small
-\caption{OpenSMC test suite summary (132 tests, all passing).}
+\caption{OpenSMC test suite summary (210 tests, all passing).}
 \label{tab:tests}
 \begin{tabular}{lrl}
 \toprule
 \textbf{Test file} & \textbf{Tests} & \textbf{Scope} \\
 \midrule
-\texttt{test\_surfaces.m}       & 20 & Surface computation, dimensions, edge cases \\
+\texttt{test\_surfaces.m}       & 28 & Surface computation, dimensions, edge cases \\
 \texttt{test\_reaching.m}       & 19 & Reaching law output, sign consistency \\
-\texttt{test\_plants.m}         & 33 & Plant dynamics, state ordering, error computation \\
-\texttt{test\_controllers.m}    & 15 & Controller compute, output dimensions \\
-\texttt{test\_estimators.m}     & 15 & Estimator interfaces, online updates, RBF-ELM \\
+\texttt{test\_plants.m}         & 49 & Plant dynamics, state ordering, error computation \\
+\texttt{test\_controllers.m}    & 24 & Controller compute, output dimensions \\
+\texttt{test\_estimators.m}     & 20 & Estimator interfaces, online updates, RBF-ELM, Levant \\
 \texttt{test\_benchmark.m}      & 17 & Simulator, metrics, references, disturbances \\
 \texttt{test\_integration.m}    & 13 & End-to-end composed systems, architecture wrappers \\
 \midrule
-\textbf{Total}                  & \textbf{132} & \\
+\textbf{Unit/integration total} & \textbf{170} & \\
+\midrule
+\texttt{validate\_twolinkarm.m} &  6 & M(q) symmetry, energy conservation, computed-torque \\
+\texttt{validate\_pmsm.m}       &  7 & Torque formula, back-EMF, steady-state speed \\
+\texttt{validate\_levant.m}     &  5 & Differentiate sin(t), t$^2$, constant; reconstruction \\
+\texttt{validate\_fixedtime.m}  &  6 & Convergence within T$_{\max}$, IC-independence, formula \\
+\texttt{validate\_surfaces.m}   &  8 & s(0)=0 guarantee, gain divergence, closed-loop \\
+\texttt{validate\_fuzzy\_discrete.m} & 8 & Chattering reduction, reaching condition, tracking \\
+\midrule
+\textbf{Validation total}       & \textbf{40} & \\
+\midrule
+\textbf{Grand total}            & \textbf{210} & \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The tests verify correctness at three levels: (i)~\emph{unit tests} check that each component's interface contract is satisfied (correct output dimensions, sign consistency of reaching laws, monotonicity of integral surfaces); (ii)~\emph{integration tests} verify that composed systems (controller + plant + simulator) produce bounded, convergent trajectories; and (iii)~\emph{regression tests} guard against sign convention errors between the error definition ($e = x_{ref} - x$) and control law signs---a subtle but critical issue discovered during development that affected all controller implementations.
+The tests verify correctness at four levels: (i)~\emph{unit tests} check that each component's interface contract is satisfied (correct output dimensions, sign consistency of reaching laws, monotonicity of integral surfaces); (ii)~\emph{integration tests} verify that composed systems (controller + plant + simulator) produce bounded, convergent trajectories; (iii)~\emph{regression tests} guard against sign convention errors between the error definition ($e = x_{ref} - x$) and control law signs---a subtle but critical issue discovered during development that affected all controller implementations; and (iv)~\emph{analytical validation tests} verify new implementations against known mathematical results (e.g., mass matrix symmetry and positive-definiteness, energy conservation under zero gravity, exact derivative recovery by the Levant differentiator, and fixed-time convergence bounds).
 
-In addition to the automated tests, the seven worked examples in the \texttt{examples/} directory serve as system-level validation. Each example was executed end-to-end in MATLAB R2023b batch mode, producing the benchmark tables reported in Tables~\ref{tab:surface_swap}--\ref{tab:quadrotor}. The results are consistent with the expected behavior of each SMC variant as described in the source literature.
+All implementations of new modules are written from scratch from published mathematical formulations in textbooks and journal papers. No code is copied from any existing repository. The analytical validation scripts prove correctness by comparing computed results against known analytical solutions, theoretical guarantees, and physics principles.
+
+In addition to the automated tests, the nine worked examples in the \texttt{examples/} directory serve as system-level validation. Each example was executed end-to-end in MATLAB R2023b batch mode, producing the benchmark tables reported in Tables~\ref{tab:surface_swap}--\ref{tab:quadrotor}. The results are consistent with the expected behavior of each SMC variant as described in the source literature.
 
 
 %% ====================================================================
@@ -485,7 +507,7 @@ OpenSMC is designed to impact three primary audiences within the control systems
 
 \paragraph{Students and educators.} OpenSMC serves as a pedagogical tool that makes the internal structure of SMC transparent. Each abstract interface clearly defines the role and contract of its component type, and the separation of concerns enables students to understand individual building blocks before studying their composition. The included examples progress from simple (double integrator) to complex (6-DOF quadrotor), providing a natural learning path.
 
-The composability of the toolbox also enables a new type of systematic study that has been difficult to conduct with ad hoc simulation code: the \emph{combinatorial benchmark}. By registering $N_s$ surfaces, $N_r$ reaching laws, and $N_p$ plants, the BenchmarkRunner can automatically evaluate all $N_s \times N_r \times N_p$ combinations and identify the Pareto-optimal configurations for multi-objective criteria (e.g., tracking accuracy vs.\ control effort vs.\ chattering). With the current library, this amounts to $9 \times 5 \times 6 = 270$ configurations per controller type---a scale of comparison that is impractical without automated benchmarking infrastructure.
+The composability of the toolbox also enables a new type of systematic study that has been difficult to conduct with ad hoc simulation code: the \emph{combinatorial benchmark}. By registering $N_s$ surfaces, $N_r$ reaching laws, and $N_p$ plants, the BenchmarkRunner can automatically evaluate all $N_s \times N_r \times N_p$ combinations and identify the Pareto-optimal configurations for multi-objective criteria (e.g., tracking accuracy vs.\ control effort vs.\ chattering). With the current library, this amounts to $11 \times 5 \times 9 = 495$ configurations per controller type---a scale of comparison that is impractical without automated benchmarking infrastructure.
 
 To contextualize the contribution, Table~\ref{tab:comparison} compares OpenSMC with existing tools.
 
@@ -502,11 +524,11 @@ To contextualize the contribution, Table~\ref{tab:comparison} compares OpenSMC w
 Open source                  & Yes  & No (book)  & Yes & Varies \\
 Modular / composable         & Yes  & No         & No  & No     \\
 Abstract interfaces          & 6    & 0          & 0   & 0      \\
-Sliding surfaces             & 9    & 4          & 2   & 1--2   \\
+Sliding surfaces             & 11   & 4          & 2   & 1--2   \\
 Reaching laws                & 5    & 2          & 1   & 1      \\
-Controllers                  & 8    & 3          & 1   & 1      \\
-Estimators                   & 6    & 0          & 0   & 0--1   \\
-Plants                       & 6    & 3          & 1   & 1      \\
+Controllers                  & 11   & 3          & 1   & 1      \\
+Estimators                   & 7    & 0          & 0   & 0--1   \\
+Plants                       & 9    & 3          & 1   & 1      \\
 Neural network estimation    & Yes  & No         & No  & Rare   \\
 Underactuated support        & Yes  & No         & No  & Rare   \\
 Standardized benchmarking    & Yes  & No         & No  & No     \\
@@ -524,9 +546,9 @@ Performance metrics          & 12   & 0          & 0   & 1--3   \\
 
 We have presented OpenSMC, a modular MATLAB toolbox for sliding mode control that addresses the long-standing lack of comprehensive, composable software tools for the SMC research community. The toolbox decomposes the SMC design problem into six orthogonal abstractions---sliding surfaces, reaching laws, estimators, controllers, plants, and architectures---that can be freely combined through well-defined interfaces. This composable design enables controlled, single-variable experiments that are essential for fair scientific comparison of SMC variants.
 
-OpenSMC provides a comprehensive library of 9~sliding surfaces, 5~reaching laws, 8~controllers, 6~estimators, 6~plants, and 2~architectures, covering the spectrum from classical first-order SMC through modern neural-network-augmented integral terminal SMC. The standardized benchmarking framework with 12~performance metrics automates the evaluation of all component combinations, enabling systematic studies at a scale that has not been previously feasible.
+OpenSMC provides a comprehensive library of 11~sliding surfaces, 5~reaching laws, 11~controllers, 7~estimators, 9~plants, and 2~architectures, covering the spectrum from classical first-order SMC through fixed-time convergence, fuzzy inference, discrete-time implementation, and modern neural-network-augmented integral terminal SMC. The standardized benchmarking framework with 12~performance metrics automates the evaluation of all component combinations, enabling systematic studies at a scale that has not been previously feasible.
 
-Future development plans include: (i)~additional plant models (flexible-link manipulators, autonomous surface vessels); (ii)~observer-based output feedback architectures; (iii)~automatic code generation for embedded deployment; (iv)~integration with reinforcement learning for automated surface parameter optimization; and (v)~a companion Python implementation for broader accessibility.
+Future development plans include: (i)~additional plant models (flexible-link manipulators, magnetic levitation systems); (ii)~observer-based output feedback architectures; (iii)~automatic code generation for embedded deployment; (iv)~integration with reinforcement learning for automated surface parameter optimization; and (v)~a companion Python implementation for broader accessibility.
 
 OpenSMC is freely available under the MIT license and is intended to grow as a community resource for SMC research, education, and application.
 
@@ -536,7 +558,7 @@ OpenSMC is freely available under the MIT license and is intended to grow as a c
 %% ====================================================================
 \section*{Code availability}
 
-The source code of OpenSMC is available at \url{https://github.com/Balghanimi/OpenSMC} under the MIT license. The repository includes all source files, examples, tests, and documentation. The toolbox requires MATLAB R2020b or later with no additional toolboxes. Version~1.0, as described in this paper, comprises 63~MATLAB files totaling approximately 6,200~lines of code, including 132~unit and integration tests. The archived release is available at \url{https://doi.org/10.5281/zenodo.18965650}.
+The source code of OpenSMC is available at \url{https://github.com/Balghanimi/OpenSMC} under the MIT license. The repository includes all source files, examples, tests, and documentation. The toolbox requires MATLAB R2020b or later with no additional toolboxes. Version~1.0, as described in this paper, comprises 81~MATLAB files totaling approximately 9,000~lines of code, including 170~unit and integration tests and 40~analytical validation tests. The archived release is available at \url{https://doi.org/10.5281/zenodo.18965650}.
 
 All code listings in this paper (Listings~\ref{lst:swap}--\ref{lst:quad}) are verbatim excerpts from the corresponding example files in the repository. Readers can reproduce every result in Tables~\ref{tab:surface_swap}--\ref{tab:quadrotor} by running the example scripts directly from the \texttt{examples/} directory.
 
@@ -616,6 +638,46 @@ Automatica 38\,(12) (2002) 2159--2167.
 X.~Yu, M.~Zhihong,
 Fast terminal sliding-mode control design for nonlinear dynamical systems,
 IEEE Transactions on Circuits and Systems I 49\,(2) (2002) 261--264.
+
+\bibitem{polyakov2012fixed}
+A.~Polyakov,
+Nonlinear feedback design for fixed-time stabilization of linear control systems,
+IEEE Transactions on Automatic Control 57\,(8) (2012) 2106--2110.
+
+\bibitem{gao1995discrete}
+W.~Gao, Y.~Wang, A.~Homaifa,
+Discrete-time variable structure control systems,
+IEEE Transactions on Industrial Electronics 42\,(2) (1995) 117--122.
+
+\bibitem{sancheztorres2018predefined}
+J.\,D.~S\'anchez-Torres, E.\,N.~Sanchez, A.\,G.~Loukianov,
+Predefined-time stability of dynamical systems with sliding modes,
+Mathematical Problems in Engineering (2018) 1--9.
+
+\bibitem{bartoszewicz1998discrete}
+A.~Bartoszewicz,
+Discrete-time quasi-sliding-mode control strategies,
+IEEE Transactions on Industrial Electronics 45\,(4) (1998) 633--637.
+
+\bibitem{khanesar2021fuzzy}
+M.\,A.~Khanesar, O.~Kaynak, S.~Yin, H.~Gao,
+Fuzzy sliding mode control,
+in: Fuzzy Logic in Its 50th Year, Studies in Fuzziness and Soft Computing, Springer, 2021, pp.~215--247.
+
+\bibitem{slotine1991applied}
+J.-J.\,E.~Slotine, W.~Li,
+Applied Nonlinear Control,
+Prentice Hall, Englewood Cliffs, NJ, 1991.
+
+\bibitem{fossen2011handbook}
+T.\,I.~Fossen,
+Handbook of Marine Craft Hydrodynamics and Motion Control,
+Wiley, Chichester, 2011.
+
+\bibitem{krause2013analysis}
+P.\,C.~Krause, O.~Wasynczuk, S.\,D.~Sudhoff, S.~Pekarek,
+Analysis of Electric Machinery and Drive Systems, 3rd~ed.,
+Wiley-IEEE Press, 2013.
 
 \end{thebibliography}
 

@@ -117,13 +117,50 @@ classdef test_estimators < matlab.unittest.TestCase
             testCase.verifyTrue(all(isfinite(dhat)));
         end
 
+        %% === LevantDifferentiator ===
+        function test_levant_initial(testCase)
+            est = estimators.LevantDifferentiator('order', 2, 'L', 100);
+            dhat = est.estimate(0, [0; 0], 0, [1.0]);
+            testCase.verifyEqual(numel(dhat), 2);
+        end
+
+        function test_levant_dimensions(testCase)
+            est = estimators.LevantDifferentiator('order', 2);
+            dhat = est.estimate(0, zeros(4,1), zeros(2,1), [0]);
+            testCase.verifyEqual(numel(dhat), 4);
+        end
+
+        function test_levant_reset(testCase)
+            est = estimators.LevantDifferentiator('order', 2);
+            est.estimate(0, [0;0], 0, [1.0]);
+            est.reset();
+            testCase.verifyTrue(isempty(est.state.z));
+        end
+
+        function test_levant_get_derivatives(testCase)
+            est = estimators.LevantDifferentiator('order', 2);
+            est.estimate(0, [0;0], 0, [5.0]);
+            derivs = est.get_derivatives();
+            testCase.verifyEqual(numel(derivs), 3);  % [f, fdot, fddot]
+        end
+
+        function test_levant_orders(testCase)
+            % Test different orders initialize correctly
+            for ord = 1:4
+                est = estimators.LevantDifferentiator('order', ord);
+                testCase.verifyEqual(est.params.order, ord);
+                testCase.verifyEqual(numel(est.params.lambdas), ord+1);
+            end
+        end
+
         %% === All Estimators ===
         function test_all_estimators_describe(testCase)
             ests = {
                 estimators.NoEstimator(), ...
                 estimators.DisturbanceObserver(), ...
                 estimators.ExtendedStateObserver(), ...
-                estimators.RBF_ELM()
+                estimators.RBF_ELM(), ...
+                estimators.LevantDifferentiator()
             };
             for i = 1:numel(ests)
                 info = ests{i}.describe();

@@ -135,6 +135,68 @@ classdef test_surfaces < matlab.unittest.TestCase
             testCase.verifyEqual(s.name, 'NonlinearDamping');
         end
 
+        %% === GlobalSurface ===
+        function test_global_starts_at_zero(testCase)
+            s = surfaces.GlobalSurface('c', 10, 'alpha', 5);
+            % At t=0, s(0) should be 0 regardless of error
+            result = s.compute(2, 3, 0, 0);
+            testCase.verifyEqual(result, 0, 'AbsTol', 1e-10);
+        end
+
+        function test_global_converges_to_linear(testCase)
+            s = surfaces.GlobalSurface('c', 10, 'alpha', 5);
+            % First call captures s0
+            s.compute(1, 2, 0, 0);
+            % At large t, exponential decays => recovers linear surface
+            result = s.compute(1, 2, 0, 100);
+            expected = 2 + 10*1;  % edot + c*e
+            testCase.verifyEqual(result, expected, 'AbsTol', 1e-6);
+        end
+
+        function test_global_reset(testCase)
+            s = surfaces.GlobalSurface('c', 10, 'alpha', 5);
+            s.compute(1, 2, 0, 0);  % captures s0
+            s.reset();
+            testCase.verifyTrue(isempty(s.state.s0));
+        end
+
+        function test_global_vector(testCase)
+            s = surfaces.GlobalSurface('c', 5);
+            e = [1; -1]; edot = [0.5; 0.5];
+            result = s.compute(e, edot, zeros(2,1), 0);
+            testCase.verifyEqual(result, [0; 0], 'AbsTol', 1e-10);
+        end
+
+        %% === PredefinedTimeSurface ===
+        function test_predef_basic(testCase)
+            s = surfaces.PredefinedTimeSurface('Tc', 2.0, 'c_inf', 10);
+            result = s.compute(1, 0, 0, 0);
+            % At t=0: c_t = pi/(2*2) / cos(0) = pi/4
+            expected = 0 + (pi/4) * 1;
+            testCase.verifyEqual(result, expected, 'AbsTol', 1e-10);
+        end
+
+        function test_predef_after_Tc(testCase)
+            s = surfaces.PredefinedTimeSurface('Tc', 2.0, 'c_inf', 10);
+            result = s.compute(1, 2, 0, 5.0);
+            % After Tc, reverts to linear: edot + c_inf*e
+            expected = 2 + 10*1;
+            testCase.verifyEqual(result, expected, 'AbsTol', 1e-10);
+        end
+
+        function test_predef_gain_increases(testCase)
+            s = surfaces.PredefinedTimeSurface('Tc', 2.0);
+            r1 = s.compute(1, 0, 0, 0.5);
+            r2 = s.compute(1, 0, 0, 1.5);
+            % Gain should increase as t approaches Tc
+            testCase.verifyGreaterThan(abs(r2), abs(r1));
+        end
+
+        function test_predef_origin(testCase)
+            s = surfaces.PredefinedTimeSurface('Tc', 1.0);
+            testCase.verifyEqual(s.compute(0, 0, 0, 0), 0, 'AbsTol', 1e-10);
+        end
+
         %% === Common Properties ===
         function test_all_surfaces_have_name(testCase)
             surfs = {
@@ -146,7 +208,9 @@ classdef test_surfaces < matlab.unittest.TestCase
                 surfaces.HierarchicalSurface(), ...
                 surfaces.IntegralSlidingSurface(), ...
                 surfaces.PIDSurface(), ...
-                surfaces.NonlinearDampingSurface()
+                surfaces.NonlinearDampingSurface(), ...
+                surfaces.GlobalSurface(), ...
+                surfaces.PredefinedTimeSurface()
             };
             for i = 1:numel(surfs)
                 testCase.verifyNotEmpty(surfs{i}.name);
@@ -161,7 +225,9 @@ classdef test_surfaces < matlab.unittest.TestCase
                 surfaces.NonsingularTerminalSurface(), ...
                 surfaces.FastTerminalSurface(), ...
                 surfaces.IntegralTerminalSurface(), ...
-                surfaces.PIDSurface()
+                surfaces.PIDSurface(), ...
+                surfaces.GlobalSurface(), ...
+                surfaces.PredefinedTimeSurface()
             };
             for i = 1:numel(surfs)
                 surfs{i}.reset();  % should not error

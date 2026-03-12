@@ -238,6 +238,126 @@ classdef test_plants < matlab.unittest.TestCase
             testCase.verifyEqual(xdot1, xdot2, 'AbsTol', 1e-10);
         end
 
+        %% === TwoLinkArm ===
+        function test_arm_dimensions(testCase)
+            p = plants.TwoLinkArm();
+            testCase.verifyEqual(p.n_states, 4);
+            testCase.verifyEqual(p.n_inputs, 2);
+            testCase.verifyEqual(p.n_dof, 2);
+            testCase.verifyEqual(p.is_underactuated, false);
+        end
+
+        function test_arm_equilibrium(testCase)
+            p = plants.TwoLinkArm();
+            % At q=[0;0], gravity torques are nonzero, so we need
+            % compensating torques for equilibrium
+            [~, ~, G] = p.get_dynamics_matrices([0; 0; 0; 0]);
+            xdot = p.dynamics(0, [0; 0; 0; 0], G, zeros(4,1));
+            testCase.verifyEqual(xdot, zeros(4,1), 'AbsTol', 1e-10);
+        end
+
+        function test_arm_freefall(testCase)
+            p = plants.TwoLinkArm();
+            xdot = p.dynamics(0, [0; 0; 0; 0], [0; 0], zeros(4,1));
+            % With gravity and zero torque, joint accelerations should be nonzero
+            testCase.verifyNotEqual(xdot(2), 0);
+        end
+
+        function test_arm_output(testCase)
+            p = plants.TwoLinkArm();
+            y = p.output([0.5; 1; 0.3; 2]);
+            testCase.verifyEqual(y, [0.5; 0.3]);
+        end
+
+        function test_arm_get_error(testCase)
+            p = plants.TwoLinkArm();
+            [e, edot] = p.get_error([0.5; 1; 0.3; 2], [1; 0; 1; 0]);
+            testCase.verifyEqual(e, [0.5; 0.7], 'AbsTol', 1e-10);
+            testCase.verifyEqual(edot, [-1; -2], 'AbsTol', 1e-10);
+        end
+
+        function test_arm_dynamics_matrices(testCase)
+            p = plants.TwoLinkArm();
+            [M, C, G] = p.get_dynamics_matrices([0; 0; 0; 0]);
+            testCase.verifySize(M, [2, 2]);
+            testCase.verifySize(C, [2, 1]);
+            testCase.verifySize(G, [2, 1]);
+            % M should be symmetric positive definite
+            testCase.verifyEqual(M(1,2), M(2,1), 'AbsTol', 1e-10);
+            testCase.verifyGreaterThan(det(M), 0);
+        end
+
+        function test_arm_custom_params(testCase)
+            p = plants.TwoLinkArm('m1', 2.0, 'm2', 1.5);
+            testCase.verifyEqual(p.params.m1, 2.0);
+            testCase.verifyEqual(p.params.m2, 1.5);
+        end
+
+        %% === PMSM ===
+        function test_pmsm_dimensions(testCase)
+            p = plants.PMSM();
+            testCase.verifyEqual(p.n_states, 4);
+            testCase.verifyEqual(p.n_inputs, 2);
+            testCase.verifyEqual(p.n_dof, 1);
+            testCase.verifyEqual(p.is_underactuated, false);
+        end
+
+        function test_pmsm_equilibrium(testCase)
+            p = plants.PMSM();
+            xdot = p.dynamics(0, zeros(4,1), [0; 0], zeros(4,1));
+            testCase.verifyEqual(xdot, zeros(4,1), 'AbsTol', 1e-10);
+        end
+
+        function test_pmsm_output(testCase)
+            p = plants.PMSM();
+            y = p.output([0.1; 0.2; 100; 3.14]);
+            testCase.verifyEqual(y, [100; 3.14]);
+        end
+
+        function test_pmsm_torque(testCase)
+            p = plants.PMSM();
+            % For SPMSM (Ld=Lq), Te = 1.5*pp*psi_f*iq
+            x = [0; 1; 0; 0];  % iq = 1
+            Te = p.get_torque(x);
+            expected = 1.5 * p.params.pp * p.params.psi_f * 1;
+            testCase.verifyEqual(Te, expected, 'AbsTol', 1e-10);
+        end
+
+        function test_pmsm_voltage_clamp(testCase)
+            p = plants.PMSM();
+            xdot1 = p.dynamics(0, zeros(4,1), [100; 100], zeros(4,1));
+            xdot2 = p.dynamics(0, zeros(4,1), [48; 48], zeros(4,1));
+            testCase.verifyEqual(xdot1, xdot2, 'AbsTol', 1e-10);
+        end
+
+        %% === SurfaceVessel ===
+        function test_vessel_dimensions(testCase)
+            p = plants.SurfaceVessel();
+            testCase.verifyEqual(p.n_states, 6);
+            testCase.verifyEqual(p.n_inputs, 3);
+            testCase.verifyEqual(p.n_dof, 3);
+        end
+
+        function test_vessel_equilibrium(testCase)
+            p = plants.SurfaceVessel();
+            xdot = p.dynamics(0, zeros(6,1), [0;0;0], zeros(6,1));
+            testCase.verifyEqual(xdot, zeros(6,1), 'AbsTol', 1e-10);
+        end
+
+        function test_vessel_output(testCase)
+            p = plants.SurfaceVessel();
+            y = p.output([10; 20; 0.5; 1; 2; 0.1]);
+            testCase.verifyEqual(y, [10; 20; 0.5]);
+        end
+
+        function test_vessel_get_error(testCase)
+            p = plants.SurfaceVessel();
+            x = [1; 2; 0.1; 0.5; 0.3; 0.01];
+            xref = [5; 5; 0; 0; 0; 0];
+            [e, edot] = p.get_error(x, xref);
+            testCase.verifyEqual(e, [4; 3; -0.1], 'AbsTol', 1e-10);
+        end
+
         %% === All Plants ===
         function test_all_plants_describe(testCase)
             ps = {
@@ -246,7 +366,10 @@ classdef test_plants < matlab.unittest.TestCase
                 plants.SinglePendulumCrane(), ...
                 plants.DoublePendulumCrane(), ...
                 plants.Quadrotor6DOF(), ...
-                plants.DualStageNanopositioner()
+                plants.DualStageNanopositioner(), ...
+                plants.TwoLinkArm(), ...
+                plants.PMSM(), ...
+                plants.SurfaceVessel()
             };
             for i = 1:numel(ps)
                 info = ps{i}.describe();
@@ -262,7 +385,10 @@ classdef test_plants < matlab.unittest.TestCase
                 plants.SinglePendulumCrane(), ...
                 plants.DoublePendulumCrane(), ...
                 plants.Quadrotor6DOF(), ...
-                plants.DualStageNanopositioner()
+                plants.DualStageNanopositioner(), ...
+                plants.TwoLinkArm(), ...
+                plants.PMSM(), ...
+                plants.SurfaceVessel()
             };
             for i = 1:numel(ps)
                 testCase.verifyEqual(numel(ps{i}.x0), ps{i}.n_states);
