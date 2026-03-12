@@ -38,20 +38,23 @@ ctrl_agg.params.eta   = 0.1;
 arch_agg = architectures.DirectSMC(ctrl_agg);
 
 % Incremental HSMC
+% Note: den = c3*b2+b1 ≈ 0.017 for this crane, so kappa is amplified ~60x.
+% Reduce kappa to prevent excessive initial force and overshoot.
 ctrl_inc = controllers.IncrementalHSMC(dummy_surf, dummy_reach);
 ctrl_inc.params.c1    = 0.85;
 ctrl_inc.params.c2    = 3.6;
 ctrl_inc.params.c3    = 0.4;
-ctrl_inc.params.kappa = 3;
-ctrl_inc.params.eta   = 0.1;
+ctrl_inc.params.kappa = 0.3;
+ctrl_inc.params.eta   = 0.02;
 arch_inc = architectures.DirectSMC(ctrl_inc);
 
 % Combining HSMC
+% Note: den = b1+c*b2 ≈ 0.021 for this crane, so kappa is amplified ~48x.
 ctrl_cmb = controllers.CombiningHSMC(dummy_surf, dummy_reach);
 ctrl_cmb.params.c     = 0.242;
 ctrl_cmb.params.alpha = 0.487;
-ctrl_cmb.params.kappa = 4;
-ctrl_cmb.params.eta   = 0.1;
+ctrl_cmb.params.kappa = 1.0;
+ctrl_cmb.params.eta   = 0.05;
 arch_cmb = architectures.DirectSMC(ctrl_cmb);
 
 %% 4. Run Benchmark

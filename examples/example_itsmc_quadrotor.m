@@ -42,27 +42,32 @@ d_ext_y = 0.15 * cos(3*t) + 0.05 * randn(1, N);
 d_ext_z = 0.1 * sin(t) + 0.03 * randn(1, N);
 
 %% 5. Create RBF-ELM Estimators
-est_x = estimators.RBF_ELM('n_hidden', 25, 'x_min', [-3 -5], 'x_max', [3 5]);
-est_y = estimators.RBF_ELM('n_hidden', 25, 'x_min', [-3 -5], 'x_max', [3 5]);
-est_z = estimators.RBF_ELM('n_hidden', 25, 'x_min', [-3 -5], 'x_max', [3 5]);
+est_x = estimators.RBF_ELM('n_hidden', 50, 'x_min', [-5 -8], 'x_max', [5 8]);
+est_y = estimators.RBF_ELM('n_hidden', 50, 'x_min', [-5 -8], 'x_max', [5 8]);
+est_z = estimators.RBF_ELM('n_hidden', 50, 'x_min', [-5 -8], 'x_max', [5 8]);
 
 %% 6. Create ITSMC Controllers (per axis)
-dummy_surf  = surfaces.IntegralTerminalSurface('c1', 3, 'c2', 1, 'p', 5, 'q', 7);
-dummy_reach = reaching.Saturation('k', 0.5, 'phi', 0.2);
+% Note: circular trajectory has centripetal acceleration ω²R ≈ 3.16 m/s²,
+% so K must exceed this for the reaching law to maintain sliding.
+dummy_surf  = surfaces.IntegralTerminalSurface('c1', 5, 'c2', 2, 'p', 5, 'q', 7);
+dummy_reach = reaching.Saturation('k', 5, 'phi', 0.1);
 
 ctrl_x = controllers.ITSMC(dummy_surf, dummy_reach, est_x);
-ctrl_x.params.c1 = 3;  ctrl_x.params.c2 = 1;
-ctrl_x.params.K = 0.5;  ctrl_x.params.lambda_s = 2;
+ctrl_x.params.c1 = 5;  ctrl_x.params.c2 = 2;
+ctrl_x.params.K = 5;   ctrl_x.params.lambda_s = 3;
+ctrl_x.params.u_max = 20;
 ctrl_x.params.dt = dt;
 
 ctrl_y = controllers.ITSMC(dummy_surf, dummy_reach, est_y);
-ctrl_y.params.c1 = 3;  ctrl_y.params.c2 = 1;
-ctrl_y.params.K = 0.5;  ctrl_y.params.lambda_s = 2;
+ctrl_y.params.c1 = 5;  ctrl_y.params.c2 = 2;
+ctrl_y.params.K = 5;   ctrl_y.params.lambda_s = 3;
+ctrl_y.params.u_max = 20;
 ctrl_y.params.dt = dt;
 
 ctrl_z = controllers.ITSMC(dummy_surf, dummy_reach, est_z);
-ctrl_z.params.c1 = 4;  ctrl_z.params.c2 = 2;
-ctrl_z.params.K = 1.0;  ctrl_z.params.lambda_s = 2;
+ctrl_z.params.c1 = 5;  ctrl_z.params.c2 = 2;
+ctrl_z.params.K = 3;   ctrl_z.params.lambda_s = 3;
+ctrl_z.params.u_max = 20;
 ctrl_z.params.dt = dt;
 
 %% 7. Create Cascaded Architecture

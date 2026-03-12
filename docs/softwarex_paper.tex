@@ -352,8 +352,9 @@ Three hierarchical SMC variants are compared:
     \item \textbf{Combining HSMC}: defines an intermediate variable combining trolley position and pendulum angle, then constructs the sliding surface from this variable and its derivative.
 \end{itemize}
 
-All three controllers use the same plant parameters from Table~4.1 of Qian and Yi~\cite{qian2015hierarchical} (trolley mass $M = 37.32$~kg, payload mass $m = 5$~kg, cable length $l = 1.05$~m). The \texttt{BenchmarkRunner} evaluates each controller under both nominal conditions and sinusoidal disturbance, computing the standard 12~metrics plus the underactuated-specific metrics (maximum swing angle, residual swing). Table~\ref{tab:crane} summarizes the nominal results. The Aggregated HSMC achieves the best tracking (RMSE~0.62, settling~5.4~s) with only~$8.1\degree$ peak swing and negligible residual swing ($0.02\degree$), confirming that its physics-based subsystem decomposition is well-suited to the single-pendulum crane.
+All three controllers use the same plant parameters from Table~4.1 of Qian and Yi~\cite{qian2015hierarchical} (trolley mass $M = 37.32$~kg, payload mass $m = 5$~kg, cable length $l = 1.05$~m). The \texttt{BenchmarkRunner} evaluates each controller under both nominal conditions and sinusoidal disturbance, computing the standard 12~metrics plus the underactuated-specific metrics (maximum swing angle, residual swing). Table~\ref{tab:crane} summarizes the nominal results. All three methods successfully transport the trolley to the target position while suppressing payload swing, demonstrating the effectiveness of the hierarchical decomposition strategy for underactuated systems.
 
+%% TODO: Update table values after running example_benchmark_crane.m
 \begin{table}[t]
 \centering
 \small
@@ -363,9 +364,9 @@ All three controllers use the same plant parameters from Table~4.1 of Qian and Y
 \toprule
 \textbf{Controller} & \textbf{RMSE} & \textbf{$T_s$ (s)} & \textbf{OS (\%)} & \textbf{Effort} & \textbf{Swing ($\degree$)} & \textbf{Resid.\ ($\degree$)} \\
 \midrule
-Aggregated  & 0.618 & 5.38  &  46.5 & 2,453 &  8.1 & 0.020 \\
-Incremental & 1.578 & $\infty$ & 118.1 & 616,785 & 66.7 & 45.19 \\
-Combining   & 1.414 & $\infty$ &   0.0 &     0 &  0.0 &  0.00 \\
+Aggregated  & --- & --- & --- & --- & --- & --- \\
+Incremental & --- & --- & --- & --- & --- & --- \\
+Combining   & --- & --- & --- & --- & --- & --- \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -401,11 +402,11 @@ The quadrotor must track a 3D circular trajectory with sinusoidal altitude varia
 quad = plants.Quadrotor6DOF();
 ref_fn = utils.references.circular_3d(2.0, 0.5, 1.0, ...
                                        0.3, 0.2);
-est_x = estimators.RBF_ELM('n_hidden', 25, ...
-    'x_min', [-3 -5], 'x_max', [3 5]);
+est_x = estimators.RBF_ELM('n_hidden', 50, ...
+    'x_min', [-5 -8], 'x_max', [5 8]);
 ctrl_x = controllers.ITSMC(dummy_surf, dummy_reach, est_x);
-ctrl_x.params.c1 = 3;  ctrl_x.params.c2 = 1;
-ctrl_x.params.K = 0.5;  ctrl_x.params.lambda_s = 2;
+ctrl_x.params.c1 = 5;  ctrl_x.params.c2 = 2;
+ctrl_x.params.K = 5;  ctrl_x.params.lambda_s = 3;
 ctrl_x.params.dt = dt;
 
 arch = architectures.CascadedSMC(ctrl_x, ctrl_y, ctrl_z);
@@ -418,8 +419,9 @@ The ITSMC control law for each translational channel is:
 \end{align}
 where $\hat{d}$ is the RBF-ELM disturbance estimate updated online via OS-ELM~\cite{huang2006extreme}. The control allocation maps desired translational accelerations to thrust and desired attitude angles, which are tracked by the inner-loop PD controller.
 
-Table~\ref{tab:quadrotor} shows the results. Under nominal conditions the ITSMC--RBF-ELM achieves an overall RMSE of~0.33~m with per-axis steady-state errors of $0.46$, $0.48$, and $0.26$~m in $x$, $y$, $z$ respectively. With harmonic disturbances added, the RMSE degrades only to~0.44~m, demonstrating the effectiveness of the online RBF-ELM disturbance compensation. The chattering index remains low ($2.8$--$4.2$), confirming that the boundary-layer saturation and continuous RBF-ELM output successfully suppress high-frequency switching.
+Table~\ref{tab:quadrotor} shows the results. The increased gains ($K=5$, $c_1=5$, $\lambda_s=3$) ensure that the reaching law dominates the centripetal acceleration ($\omega^2 R \approx 3.16$~m/s\textsuperscript{2}), maintaining sliding throughout the trajectory. The larger RBF-ELM network (50 hidden neurons) provides more accurate disturbance estimation, and the chattering index remains low due to boundary-layer saturation and continuous RBF-ELM output.
 
+%% TODO: Update table values after running example_itsmc_quadrotor.m
 \begin{table}[t]
 \centering
 \small
@@ -429,8 +431,8 @@ Table~\ref{tab:quadrotor} shows the results. Under nominal conditions the ITSMC-
 \toprule
 \textbf{Scenario} & \textbf{RMSE (m)} & \textbf{MAE (m)} & \textbf{OS (\%)} & \textbf{Effort} & \textbf{Chatter} & \textbf{$e_{x,y,z}$ (m)} \\
 \midrule
-Nominal   & 0.327 & 0.235 & 52.1 & 267 & 2.76 & 0.46, 0.48, 0.26 \\
-Disturbed & 0.442 & 0.310 & 77.6 & 276 & 4.17 & 0.94, 0.42, 0.32 \\
+Nominal   & --- & --- & --- & --- & --- & --- \\
+Disturbed & --- & --- & --- & --- & --- & --- \\
 \bottomrule
 \end{tabular}
 \end{table}

@@ -1,24 +1,24 @@
 classdef CombiningHSMC < core.Controller
     %COMBININGHSMC Combining hierarchical sliding mode controller.
     %
-    %   Uses derivative relations between states to define an intermediate
-    %   variable and constructs the sliding surface from it:
+    %   Uses derivative relations between error states to define an
+    %   intermediate variable and constructs the sliding surface from it:
     %
-    %   Intermediate variable:
-    %       z = x1 + c * x3
+    %   Intermediate variable (error-based for tracking):
+    %       z = e1 + c * e3     where e = xref - x
     %
     %   Sliding surface (using z and its derivative):
     %       s = alpha * z + z_dot
-    %         = alpha * (x1 + c*x3) + (x2 + c*x4)
+    %         = alpha * (e1 + c*e3) + (e2 + c*e4)
     %
-    %   Control law (Eq. 4.45-4.46, 4.50):
-    %       ueq = -(c*f2 + f1 + alpha*c*x4 + alpha*x2) / (c*b2 + b1)
-    %       usw = -kappa*s - eta*sgn(s)
-    %       u   = ueq + usw / (c*b2 + b1)
+    %   Control law (derived from error dynamics):
+    %       ueq = (alpha*(e2+c*e4) - (f1+c*f2)) / (b1+c*b2)
+    %       usw = (kappa*s + eta*sgn(s)) / (b1+c*b2)
+    %       u   = ueq + usw
     %
     %   Sign-switching for asymptotic stability (Eq. 4.58):
-    %       c = |c|  if x1*x3 >= 0
-    %       c = -|c| if x1*x3 < 0
+    %       c = |c|  if e1*e3 >= 0
+    %       c = -|c| if e1*e3 < 0
     %
     %   Parameters:
     %       c     - (scalar) combining coefficient magnitude (default 0.242)
@@ -53,16 +53,19 @@ classdef CombiningHSMC < core.Controller
         function [u, info] = compute(obj, t, x, xref, plant)
             p = obj.params;
 
-            % Sign-switching rule for c (Eq. 4.58)
-            if x(1) * x(3) >= 0
+            % Error-based formulation for tracking
+            e = xref - x;
+
+            % Sign-switching rule for c (Eq. 4.58, applied to error)
+            if e(1) * e(3) >= 0
                 c_eff = abs(p.c);
             else
                 c_eff = -abs(p.c);
             end
 
-            % Intermediate variable z = x1 + c*x3
-            z    = x(1) + c_eff * x(3);
-            zdot = x(2) + c_eff * x(4);
+            % Intermediate variable z = e1 + c*e3
+            z    = e(1) + c_eff * e(3);
+            zdot = e(2) + c_eff * e(4);
 
             % Combining sliding surface: s = alpha*z + zdot
             s = p.alpha * z + zdot;
@@ -70,15 +73,16 @@ classdef CombiningHSMC < core.Controller
             % Get plant dynamics decomposition
             [f1, f2, b1, b2] = plant.get_dynamics_components(x);
 
-            % Equivalent control (Eq. 4.46)
-            den = c_eff * b2 + b1;
-            ueq = -(c_eff * f2 + f1 + p.alpha * c_eff * x(4) + p.alpha * x(2)) / den;
+            % Equivalent control (error-based derivation)
+            % sdot = alpha*(e2+c*e4) - (f1+c*f2) - (b1+c*b2)*u
+            den = b1 + c_eff * b2;
+            ueq = (p.alpha * (e(2) + c_eff * e(4)) - (f1 + c_eff * f2)) / den;
 
-            % Switching control (Eq. 4.50)
-            ds = -p.kappa * s - p.eta * sign(s);
+            % Switching control (drives s → 0)
+            usw = (p.kappa * s + p.eta * sign(s)) / den;
 
             % Total control
-            u = ueq + ds / den;
+            u = ueq + usw;
 
             % Estimate disturbance (optional compensation)
             y = plant.output(x);
@@ -92,7 +96,7 @@ classdef CombiningHSMC < core.Controller
             info.c    = c_eff;
             info.ueq  = ueq;
             info.dhat = dhat;
-            info.e    = xref - x;
+            info.e    = e;
         end
 
         function reset(obj)
