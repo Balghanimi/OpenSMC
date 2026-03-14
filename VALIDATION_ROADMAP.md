@@ -9,13 +9,13 @@
 |-------|-----------|-----------|--------|
 | 1. Foundations | 5 | 5/5 | COMPLETE |
 | 2. Surfaces | 10 | 10/10 | COMPLETE |
-| 3. Controllers | 10 | 4/10 | IN PROGRESS |
+| 3. Controllers | 10 | 6/10 | IN PROGRESS |
 | 4. Estimators | 6 | 0/6 | Pending |
 | 5. Plants | 8 | 0/8 | Pending |
 | 6. Benchmarks | 4 | 0/4 | Pending |
-| **Total** | **43** | **15/43** | **35%** |
+| **Total** | **43** | **17/43** | **40%** |
 
-**Total tests passing: 262 (across 15 notebooks)**
+**Total tests passing: 282 (across 17 notebooks)**
 
 **Convention:** Each validation includes:
 1. The published reference (book/paper, equation numbers, figure numbers)
@@ -49,10 +49,10 @@
 | **Phase 3: Controllers** |
 | 16 | AdaptiveSMC | Controller | Liu & Wang (2012) Ch 6 | Gain adaptation | `16_Adaptive_SMC_Liu_Ch2.ipynb` | | **PYTHON 13/13 PASS** |
 | 17 | DynamicSMC | Controller | Liu & Wang (2012) Ch 5 | Continuous u(t) | `17_Dynamic_SMC.ipynb` | | **PYTHON 9/9 PASS** |
-| 18 | AggregatedHSMC | Controller | Qian & Yi (2015) Ch 4, Eq 4.7-4.15 | | `18_Aggregated_HSMC.ipynb` | | Pending |
+| 18 | AggregatedHSMC | Controller | Qian & Yi (2015) Ch 4, Eq 4.7-4.15 | Crane plant | `18_Aggregated_HSMC.ipynb` | | **PYTHON 8/8 PASS** |
 | 19 | IncrementalHSMC | Controller | Qian & Yi (2015) Ch 4, Eq 4.27-4.34 | | `19_Incremental_HSMC.ipynb` | | Pending |
 | 20 | CombiningHSMC | Controller | Qian & Yi (2015) Ch 4, Eq 4.58 | | `20_Combining_HSMC.ipynb` | | Pending |
-| 21 | FuzzySMC | Controller | Khanesar et al. (2021) Springer | | `21_Fuzzy_SMC.ipynb` | | Pending |
+| 21 | FuzzySMC | Controller | Khanesar et al. (2021) Springer | Fuzzy inference | `21_Fuzzy_SMC.ipynb` | | **PYTHON 12/12 PASS** |
 | 22 | DiscreteSMC | Controller | Gao et al. (1995) IEEE TIE 42(2) | Quasi-sliding band | `22_Discrete_SMC_Gao1995.ipynb` | | **PYTHON 13/13 PASS** |
 | 23 | FixedTimeSMC | Controller | Polyakov (2012) IEEE TAC 57(8) | T_max bound | `23_FixedTime_Polyakov2012.ipynb` | | **PYTHON 23/23 PASS** |
 | 24 | ITSMC | Controller | Al Ghanimi (2026) — own manuscript | | `24_ITSMC_Quadrotor.ipynb` | | Pending |
@@ -126,3 +126,5 @@
 | 2026-03-14 | #17 Dynamic SMC (Liu Ch5) | **PYTHON 9/9 PASS** — TV(u) much lower than classical. u(t) continuous. Proper sigma formulation with plant model. K-tradeoff verified. |
 | 2026-03-14 | #22 Discrete SMC (Gao 1995) | **PYTHON 13/13 PASS** — Quasi-sliding band matches theory. Band grows with Ts. ZOH control converges. Robust to sinusoidal disturbance. |
 | 2026-03-14 | #23 Fixed-Time SMC (Polyakov 2012) | **PYTHON 23/23 PASS** — T_max bound holds for all ICs (0.01 to 1000). Bi-power beats finite-time for large ICs. Closed-loop converges. |
+| 2026-03-14 | #18 Aggregated HSMC (Qian & Yi Sec 4.2) | **PYTHON 8/8 PASS** — Surface decomposition S=alpha*s1+s2. Crane trolley positioning + swing suppression (<2 deg). HSMC beats PD on swing. |
+| 2026-03-14 | #21 Fuzzy SMC (Khanesar 2021) | **PYTHON 12/12 PASS** — MFs with partition of unity. Rule base sign-correct. Smooth k_fuzzy output. TV(u) lower than sign(). |
